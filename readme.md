@@ -22,7 +22,6 @@ rvm --default use 2.4
 
 gem install rails -v 4 --no-document
 gem install bundler:1.17.3 --no-document --no-rdoc --no-ri
-cd /tmp
 \curl -sSL https://deb.nodesource.com/setup_10.x -o nodejs.sh
 cat /tmp/nodejs.sh | sudo -E bash -
 sudo apt-get update
@@ -46,6 +45,7 @@ https://www.phusionpassenger.com/library/install/nginx/install/oss/bionic/
 sudo apt-get install -y dirmngr gnupg
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 561F9B9CAC40B2F7
 sudo apt-get install -y apt-transport-https ca-certificates
+
 sudo sh -c 'echo deb https://oss-binaries.phusionpassenger.com/apt/passenger bionic main > /etc/apt/sources.list.d/passenger.list'
 sudo apt-get update
 sudo apt-get install -y libnginx-mod-http-passenger
@@ -54,7 +54,6 @@ if [ ! -f /etc/nginx/modules-enabled/50-mod-http-passenger.conf ]; then sudo ln 
 sudo ls /etc/nginx/conf.d/mod-http-passenger.conf
 
 sudo service nginx restart
-sudo /usr/bin/passenger-config validate-install
 ```
 
 - Install mysql
@@ -63,6 +62,7 @@ https://www.digitalocean.com/community/tutorials/how-to-install-mysql-on-ubuntu-
 ```
 sudo apt-get update
 sudo apt-get install -y mysql-server-5.7
+
 sudo mysql <<SQL
 ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root';
 FLUSH PRIVILEGES;
@@ -90,8 +90,7 @@ make pull
 cd ~
 git clone --depth=1 https://github.com/OpenDSA/OpenDSA-LTI.git
 cd OpenDSA-LTI
-bundle install 
-# bundle install --deployment --without development test
+bundle install --deployment --without development test
 ```
 
 - Link OpenDSA to OpenDSA-LTI
@@ -102,7 +101,6 @@ ln -s /home/ubuntu/OpenDSA /home/ubuntu/OpenDSA-LTI/public
 
 - Configure rails app to connect to the database
 ```
-cd ~/OpenDSA-LTI/config
 vi ~/OpenDSA-LTI/config/database.yml
 # Add
 production:
@@ -115,6 +113,7 @@ production:
 # Then save
 
 cd ~/OpenDSA-LTI
+RAILS_ENV=production
 bundle exec rake db:drop
 bundle exec rake db:create
 bundle exec rake db:schema:load
@@ -126,14 +125,10 @@ bundle exec rake db:populate
 
 ```
 cd ~/OpenDSA-LTI
-rake secret
-# bundle exec rake secret
-cd ~/OpenDSA-LTI/config/secrets.yml
-vi secrets.yml
-```
+bundle exec rake secret
+vi ~/OpenDSA-LTI/config/secrets.yml
 
-Copy the following lines and replace secret_string with your new secret
-```
+# Copy the following lines and replace secret_string with your new secret
 production:
   secret_key_base: secret_string
 
@@ -151,10 +146,8 @@ https://www.phusionpassenger.com/library/walkthroughs/deploy/ruby/aws/nginx/oss/
 compile rails assets
 
 ```
-bundle exec rake assets:precompile db:migrate RAILS_ENV=production
+bundle exec rake assets:precompile
 ```
-
-
 
 - Configure nginx and passenger to serve rails app
 https://www.phusionpassenger.com/library/walkthroughs/deploy/ruby/ownserver/nginx/oss/bionic/deploy_app.html
@@ -162,14 +155,15 @@ https://www.phusionpassenger.com/library/walkthroughs/deploy/ruby/ownserver/ngin
 ```
 sudo vi /etc/nginx/nginx.conf
 # change www-data to ubuntu
-# which ruby 
-# /home/ubuntu/.rvm/rubies/ruby-2.4.9/bin/ruby
+
+# passenger-config about ruby-command 
+# /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby
 
 sudo vi /etc/nginx/conf.d/mod-http-passenger.conf
 
 # Then put the following two lines 
 passenger_root /usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini;
-passenger_ruby /home/ubuntu/.rvm/rubies/ruby-2.4.9/bin/ruby;
+passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby
 sudo service nginx restart
 ```
 
@@ -178,10 +172,13 @@ sudo service nginx restart
 sudo vi /etc/nginx/sites-enabled/default
 # copy the following 
 server {
-        listen 80 default_server;
-        listen [::]:80 default_server ipv6only=on;
+        listen 80;
+        listen [::]:80;
+        server_name ec2-3-215-77-210.compute-1.amazonaws.com;
 
         passenger_enabled on;
+        passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby;
+
         rails_env    production;
         root         /home/ubuntu/OpenDSA-LTI/public;
 
