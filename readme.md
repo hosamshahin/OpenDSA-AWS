@@ -4,7 +4,8 @@ Install OpenDSA-LTI manually
 
 ```
 sudo apt-get update
-sudo apt-get install -y libmysqlclient-dev
+sudo apt-get install -y curl gnupg build-essential libmysqlclient-dev
+
 ```
 
 - Intall ruby and rails
@@ -17,9 +18,10 @@ curl -sSL https://get.rvm.io -o rvm.sh
 cat /tmp/rvm.sh | bash -s stable --rails
 source /home/ubuntu/.rvm/scripts/rvm
 rvm install 2.4
-rvm use 2.4
+rvm --default use 2.4
+
 gem install rails -v 4 --no-document
-gem install bundler:1.17.3 --no-document
+gem install bundler:1.17.3 --no-document --no-rdoc --no-ri
 cd /tmp
 \curl -sSL https://deb.nodesource.com/setup_10.x -o nodejs.sh
 cat /tmp/nodejs.sh | sudo -E bash -
@@ -89,6 +91,7 @@ cd ~
 git clone --depth=1 https://github.com/OpenDSA/OpenDSA-LTI.git
 cd OpenDSA-LTI
 bundle install 
+# bundle install --deployment --without development test
 ```
 
 - Link OpenDSA to OpenDSA-LTI
@@ -124,9 +127,9 @@ bundle exec rake db:populate
 ```
 cd ~/OpenDSA-LTI
 rake secret
+# bundle exec rake secret
 cd ~/OpenDSA-LTI/config/secrets.yml
 vi secrets.yml
-
 ```
 
 Copy the following lines and replace secret_string with your new secret
@@ -137,7 +140,21 @@ production:
 staging:
   secret_key_base: secret_string
 
+
+chmod 700 config db
+chmod 600 config/database.yml config/secrets.yml
 ```
+
+- Deploy rails on AWS
+https://www.phusionpassenger.com/library/walkthroughs/deploy/ruby/aws/nginx/oss/bionic/deploy_app.html
+
+compile rails assets
+
+```
+bundle exec rake assets:precompile db:migrate RAILS_ENV=production
+```
+
+
 
 - Configure nginx and passenger to serve rails app
 https://www.phusionpassenger.com/library/walkthroughs/deploy/ruby/ownserver/nginx/oss/bionic/deploy_app.html
