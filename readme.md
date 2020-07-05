@@ -91,9 +91,90 @@ cd OpenDSA-LTI
 bundle install 
 ```
 
-- configure rails app to connect to the database
+- Link OpenDSA to OpenDSA-LTI
+
+
+- Configure rails app to connect to the database
+```
+cd ~/OpenDSA-LTI/config
+vi ~/OpenDSA-LTI/config/database.yml
+# Add
+production:
+   adapter: mysql2
+   database: opendsa
+   username: opendsa
+   password: opendsa
+   host: localhost
+   strict: false
+# Then save
+
+cd ~/OpenDSA-LTI
+bundle exec rake db:drop
+bundle exec rake db:create
+bundle exec rake db:schema:load
+bundle exec rake db:populate
+
+```
+
+- Configure rails app secret file
+
+```
+cd ~/OpenDSA-LTI
+rake secret
+cd ~/OpenDSA-LTI/config/secrets.yml
+vi secrets.yml
+
+```
+
+Copy the following lines and replace secret_string with your new secret
+```
+production:
+  secret_key_base: secret_string
+
+staging:
+  secret_key_base: secret_string
+
+```
+
 - configure nginx and passenger to serve rails app
 https://www.phusionpassenger.com/library/walkthroughs/deploy/ruby/ownserver/nginx/oss/bionic/deploy_app.html
+
+```
+sudo vi /etc/nginx/nginx.conf
+# change www-data to ubuntu
+# which ruby 
+# /home/ubuntu/.rvm/rubies/ruby-2.4.9/bin/ruby
+
+sudo vi /etc/nginx/conf.d/mod-http-passenger.conf
+
+# Then put the following two lines 
+passenger_root /usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini;
+passenger_ruby /home/ubuntu/.rvm/rubies/ruby-2.4.9/bin/ruby;
+sudo service nginx restart
+```
+
+- Configure nginx
+```
+sudovi /etc/nginx/sites-enabled/default
+# copy the following 
+server {
+        listen 80 default_server;
+        listen [::]:80 default_server ipv6only=on;
+
+        passenger_enabled on;
+        rails_env    production;
+        root         /home/ubuntu/OpenDSA-LTI/public;
+
+        # redirect server error pages to the static page /50x.html
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+}
+
+sudo service nginx restart
+
+```
 
 
 - references
