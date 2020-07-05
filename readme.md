@@ -110,6 +110,15 @@ production:
    password: opendsa
    host: localhost
    strict: false
+
+development:
+   adapter: mysql2
+   database: opendsa
+   username: opendsa
+   password: opendsa
+   host: localhost
+   strict: false
+   
 # Then save
 
 cd ~/OpenDSA-LTI
@@ -135,6 +144,7 @@ production:
 staging:
   secret_key_base: secret_string
 
+# Then save
 
 chmod 700 config db
 chmod 600 config/database.yml config/secrets.yml
@@ -154,7 +164,90 @@ https://www.phusionpassenger.com/library/walkthroughs/deploy/ruby/ownserver/ngin
 
 ```
 sudo vi /etc/nginx/nginx.conf
-# change www-data to ubuntu
+
+user ubuntu;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+        worker_connections 768;
+        # multi_accept on;
+}
+
+http {
+        ##
+        # Basic Settings
+        ##
+
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+        # server_tokens off;
+
+        server_names_hash_bucket_size 64;
+        # server_name_in_redirect off;
+
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+
+        ##
+        # SSL Settings
+        ##
+
+        ssl_protocols TLSv1 TLSv1.1 TLSv1.2; # Dropping SSLv3, ref: POODLE
+        ssl_prefer_server_ciphers on;
+
+        ##
+        # Logging Settings
+        ##
+
+        access_log /var/log/nginx/access.log;
+        error_log /var/log/nginx/error.log;
+
+        ##
+        # Gzip Settings
+        ##
+
+        gzip on;
+
+        # gzip_vary on;
+        # gzip_proxied any;
+        # gzip_comp_level 6;
+        # gzip_buffers 16 8k;
+        # gzip_http_version 1.1;
+        # gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+        ##
+        # Virtual Host Configs
+        ##
+
+        include /etc/nginx/conf.d/*.conf;
+        include /etc/nginx/sites-enabled/*;
+}
+
+#mail {
+#       # See sample authentication script at:
+#       # http://wiki.nginx.org/ImapAuthenticateWithApachePhpScript
+# 
+#       # auth_http localhost/auth.php;
+#       # pop3_capabilities "TOP" "USER";
+#       # imap_capabilities "IMAP4rev1" "UIDPLUS";
+# 
+#       server {
+#               listen     localhost:110;
+#               protocol   pop3;
+#               proxy      on;
+#       }
+# 
+#       server {
+#               listen     localhost:143;
+#               protocol   imap;
+#               proxy      on;
+#       }
+#}
 
 # passenger-config about ruby-command 
 # /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby
@@ -163,7 +256,8 @@ sudo vi /etc/nginx/conf.d/mod-http-passenger.conf
 
 # Then put the following two lines 
 passenger_root /usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini;
-passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby
+passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby;
+
 sudo service nginx restart
 ```
 
@@ -205,4 +299,5 @@ https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/deploying.applica
 ```
 1- create opendsa.org subdomain
 2- generate and use cert in EC2
+3- 
 ```
