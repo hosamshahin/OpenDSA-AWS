@@ -92,7 +92,10 @@ bundle install
 ```
 
 - Link OpenDSA to OpenDSA-LTI
+```
+ln -s /home/ubuntu/OpenDSA /home/ubuntu/OpenDSA-LTI/public
 
+```
 
 - Configure rails app to connect to the database
 ```
@@ -155,7 +158,7 @@ sudo service nginx restart
 
 - Configure nginx
 ```
-sudovi /etc/nginx/sites-enabled/default
+sudo vi /etc/nginx/sites-enabled/default
 # copy the following 
 server {
         listen 80 default_server;
