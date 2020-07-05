@@ -8,7 +8,7 @@ sudo apt-get install -y libmysqlclient-dev
 ```
 
 - Intall ruby and rails
-https://www.digitalocean.com/community/tutorial s/how-to-install-ruby-on-rails-with-rvm-on-ubuntu-18-04
+https://www.digitalocean.com/community/tutorials/how-to-install-ruby-on-rails-with-rvm-on-ubuntu-18-04
 
 ```
 gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
@@ -139,7 +139,7 @@ staging:
 
 ```
 
-- configure nginx and passenger to serve rails app
+- Configure nginx and passenger to serve rails app
 https://www.phusionpassenger.com/library/walkthroughs/deploy/ruby/ownserver/nginx/oss/bionic/deploy_app.html
 
 ```
@@ -181,11 +181,14 @@ sudo service nginx restart
 
 
 - references
+```
 https://aws.amazon.com/blogs/devops/best-practices-for-deploying-applications-on-aws-cloudformation-stacks/
 
 https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/deploying.applications.html
-
+```
 
 - Question 
+```
 1- create opendsa.org subdomain
 2- generate and use cert in EC2
+```
