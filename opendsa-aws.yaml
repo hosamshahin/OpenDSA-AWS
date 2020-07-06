@@ -136,7 +136,7 @@ Resources:
                 [cfn-auto-reloader-hook]
                 triggers=post.update
                 path=Resources.LaunchConfig.Metadata.AWS::CloudFormation::Init
-                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource EC2Instance --configsets full_install --region ${AWS::Region}
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource WebServer --configsets full_install --region ${AWS::Region}
                 runas=root
             /lib/systemd/system/cfn-hup.service:
               content: !Sub |
@@ -170,8 +170,8 @@ Resources:
           apt-get install -y python-setuptools
           mkdir -p /opt/aws/bin
           python /usr/lib/python2.7/dist-packages/easy_install.py --script-dir /opt/aws/bin https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
-          /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource EC2 --configsets full_install --region ${AWS::Region}
-          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource EC2 --region ${AWS::Region}          
+          /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource WebServer --configsets full_install --region ${AWS::Region}
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource WebServer --region ${AWS::Region}          
     CreationPolicy:
       ResourceSignal:
         Timeout: PT30M
