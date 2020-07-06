@@ -84,7 +84,7 @@ Parameters:
     Default: 0.0.0.0/0
     AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
-
+    
 Mappings:
   AWSRegionArch2AMI:
     us-east-1:
@@ -115,259 +115,74 @@ Mappings:
 Resources:
   WebServer:
     Type: 'AWS::EC2::Instance'
-    # Metadata:
-    #   'AWS::CloudFormation::Init':
-    #     configSets:
-    #       full_install:
-    #         - install_cfn
-    #         - install_ruby_2_3_1
-    #         - install_mysql
-    #         - configure_mysql
-    #         - install_application
-    #     install_cfn:
-    #       files:
-    #         /etc/cfn/cfn-hup.conf:
-    #           content: !Join 
-    #             - ''
-    #             - - |
-    #                 [main]
-    #               - stack=
-    #               - !Ref 'AWS::StackId'
-    #               - |+
+    Metadata:
+      'AWS::CloudFormation::Init':
+        configSets:
+          full_install:
+            - install_and_enable_cfn_hup
+        install_and_enable_cfn_hup:
+          files:
+            /etc/cfn/cfn-hup.conf:
+              content: !Join 
+                - ''
+                - - |
+                    [main]
+                  - stack=
+                  - !Ref 'AWS::StackId'
+                  - |+
 
-    #               - region=
-    #               - !Ref 'AWS::Region'
-    #               - |+
+                  - region=
+                  - !Ref 'AWS::Region'
+                  - |+
 
-    #           mode: '000400'
-    #           owner: root
-    #           group: root
-    #         /etc/cfn/hooks.d/cfn-auto-reloader.conf:
-    #           content: !Join 
-    #             - ''
-    #             - - |
-    #                 [cfn-auto-reloader-hook]
-    #               - |
-    #                 triggers=post.update
-    #               - |
-    #                 path=Resources.WebServer.Metadata.AWS::CloudFormation::Init
-    #               - 'action=/opt/aws/bin/cfn-init -v '
-    #               - '         --stack '
-    #               - !Ref 'AWS::StackName'
-    #               - '         --resource WebServer '
-    #               - '         --configsets full_install '
-    #               - '         --region '
-    #               - !Ref 'AWS::Region'
-    #               - |+
+              mode: '000400'
+              owner: root
+              group: root
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Join 
+                - ''
+                - - |
+                    [cfn-auto-reloader-hook]
+                  - |
+                    triggers=post.update
+                  - >
+                    path=Resources.EC2Instance.Metadata.AWS::CloudFormation::Init
+                  - 'action=/opt/aws/bin/cfn-init -v '
+                  - '         --stack '
+                  - !Ref 'AWS::StackName'
+                  - '         --resource EC2Instance '
+                  - '         --configsets full_install '
+                  - '         --region '
+                  - !Ref 'AWS::Region'
+                  - |+
 
-    #               - |
-    #                 runas=root
-    #           mode: '000400'
-    #           owner: root
-    #           group: root
-    #       services:
-    #         sysvinit:
-    #           cfn-hup:
-    #             enabled: 'true'
-    #             ensureRunning: 'true'
-    #             files:
-    #               - /etc/cfn/cfn-hup.conf
-    #               - /etc/cfn/hooks.d/cfn-auto-reloader.conf
-    #     install_ruby_2_3_1:
-    #       files:
-    #         /tmp/install_ruby:
-    #           content: !Join 
-    #             - |+
+                  - |
+                    runas=root
+            /lib/systemd/system/cfn-hup.service:
+              content: !Join 
+                - ''
+                - - |
+                    [Unit]
+                  - |+
+                    Description=cfn-hup daemon
 
-    #             - - '#!/bin/bash'
-    #               - 'curl -sSL https://get.rvm.io | bash'
-    #               - source /etc/profile.d/rvm.sh
-    #               - rvm install 2.3.1
-    #               - rvm --default use 2.3.1
-    #               - gem install rails
-    #           mode: '000500'
-    #           owner: root
-    #           group: root
-    #       commands:
-    #         01_install_ruby:
-    #           command: /tmp/install_ruby > /var/log/install_ruby.log
-    #     install_mysql:
-    #       packages:
-    #         yum:
-    #           mysql: []
-    #           mysql-server: []
-    #           mysql-devel: []
-    #           mysql-libs: []
-    #       files:
-    #         /tmp/setup.mysql:
-    #           content: !Join 
-    #             - ''
-    #             - - CREATE USER '
-    #               - !Ref DBUser
-    #               - '''@''localhost'' IDENTIFIED BY '''
-    #               - !Ref DBPassword
-    #               - |
-    #                 ';
-    #               - 'GRANT ALL ON '
-    #               - !Ref DBName
-    #               - .* TO '
-    #               - !Ref DBUser
-    #               - |
-    #                 '@'localhost';
-    #               - |
-    #                 FLUSH PRIVILEGES;
-    #           mode: '000400'
-    #           owner: root
-    #           group: root
-    #       services:
-    #         sysvinit:
-    #           mysqld:
-    #             enabled: 'true'
-    #             ensureRunning: 'true'
-    #     configure_mysql:
-    #       commands:
-    #         01_set_mysql_root_password:
-    #           command: !Join 
-    #             - ''
-    #             - - mysqladmin -u root password '
-    #               - !Ref DBRootPassword
-    #               - ''''
-    #           test: !Join 
-    #             - ''
-    #             - - '$(mysql '
-    #               - !Ref DBName
-    #               - ' -u root --password='''
-    #               - !Ref DBRootPassword
-    #               - ''' >/dev/null 2>&1 </dev/null); (( $? != 0 ))'
-    #         02_create_database:
-    #           command: !Join 
-    #             - ''
-    #             - - mysql -u root --password='
-    #               - !Ref DBRootPassword
-    #               - ''' < /tmp/setup.mysql'
-    #           test: !Join 
-    #             - ''
-    #             - - '$(mysql '
-    #               - !Ref DBName
-    #               - ' -u root --password='''
-    #               - !Ref DBRootPassword
-    #               - ''' >/dev/null 2>&1 </dev/null); (( $? != 0 ))'
-    #         03_cleanup:
-    #           command: rm /tmp/setup.mysql
-    #     install_application:
-    #       files:
-    #         /tmp/database.yml:
-    #           content: !Join 
-    #             - ''
-    #             - - |
-    #                 development:
-    #               - |2
-    #                   adapter: mysql2
-    #               - |2
-    #                   encoding: utf8
-    #               - |2
-    #                   reconnect: false
-    #               - |2
-    #                   pool: 5
-    #               - '  database: '
-    #               - !Ref DBName
-    #               - |+
+                  - |
+                    [Service]
+                  - |
+                    Type=simple
+                  - |
+                    ExecStart=/opt/aws/bin/cfn-hup
+                  - |+
+                    Restart=always
 
-    #               - '  username: '
-    #               - !Ref DBUser
-    #               - |+
-
-    #               - '  password: '
-    #               - !Ref DBPassword
-    #               - |+
-
-    #               - |2
-    #                   socket: /var/lib/mysql/mysql.sock
-    #           mode: '000400'
-    #           owner: root
-    #           group: root
-    #         /tmp/install_application:
-    #           content: !Join 
-    #             - ''
-    #             - - |
-    #                 #!/bin/bash -e
-    #               - |
-    #                 source /etc/profile.d/rvm.sh
-    #               - |
-    #                 rvm use 2.3.1
-    #               - |
-    #                 export HOME=/home/ec2-user
-    #               - |
-    #                 export PATH=$PATH:/usr/local/bin
-    #               - |
-    #                 cd /home/ec2-user
-    #               - |
-    #                 # Kill the rails server if it is running to allow update
-    #               - |
-    #                 if pgrep ruby &> /dev/null ; then pkill -TERM ruby ; fi
-    #               - |
-    #                 # This sample template creates a new application inline
-    #               - |
-    #                 # Typically you would use files and/or sources to download
-    #               - >
-    #                 # your application package and perform any configuration
-    #                 here.
-    #               - >
-    #                 # Create a new application, with therubyracer javascript
-    #                 library
-    #               - >
-    #                 rails new sample -d mysql --skip-spring --skip-bundle
-    #                 --force
-    #               - |
-    #                 cd /home/ec2-user/sample
-    #               - |
-    #                 sed -i 's/^# \(.*therubyracer.*$\)/\1/' Gemfile
-    #               - |
-    #                 bundle install
-    #               - |
-    #                 # Create a sample scoffold
-    #               - |
-    #                 rails generate scaffold Note title:string body:text --force
-    #               - |
-    #                 # Configure the database connection
-    #               - |
-    #                 mv /tmp/database.yml config
-    #               - |
-    #                 rake db:create db:migrate
-    #           mode: '000500'
-    #           owner: root
-    #           group: root
-    #         /home/ec2-user/start-application:
-    #           content: !Join 
-    #             - ''
-    #             - - |
-    #                 #!/bin/bash -e
-    #               - |
-    #                 source /etc/profile.d/rvm.sh
-    #               - |
-    #                 rvm use 2.3.1
-    #               - |
-    #                 export HOME=/home/ec2-user
-    #               - |
-    #                 export PATH=$PATH:/usr/local/bin
-    #               - |
-    #                 cd /home/ec2-user/sample
-    #               - |
-    #                 # Startup the application
-    #               - |
-    #                 rails server --binding 0.0.0.0 -p 80 -d
-    #           mode: '000500'
-    #           owner: root
-    #           group: root
-    #       commands:
-    #         01_install_application:
-    #           command: /tmp/install_application > /var/log/install_application.log
-    #         02_configure_reboot:
-    #           command: echo /home/ec2-user/start-application >> /etc/rc.local
-    #         03_start_application:
-    #           command: /home/ec2-user/start-application
-    #         04_cleanup:
-    #           command: rm /tmp/install_application
+                  - |
+                    [Install]
+                  - WantedBy=multi-user.target
+          commands:
+            01enable_cfn_hup:
+              command: systemctl enable cfn-hup.service
+            02start_cfn_hup:
+              command: systemctl start cfn-hup.service
     Properties:
       ImageId: !FindInMap 
         - AWSRegionArch2AMI
@@ -377,32 +192,42 @@ Resources:
       SecurityGroups:
         - !Ref WebServerSecurityGroup
       KeyName: !Ref KeyName
-    #   UserData: !Base64 
-    #     'Fn::Join':
-    #       - ''
-    #       - - |
-    #           #!/bin/bash -xe
-    #         - |
-    #           yum update -y aws-cfn-bootstrap
-    #         - '/opt/aws/bin/cfn-init -v '
-    #         - '         --stack '
-    #         - !Ref 'AWS::StackId'
-    #         - '         --resource WebServer '
-    #         - '         --configsets full_install '
-    #         - '         --region '
-    #         - !Ref 'AWS::Region'
-    #         - |+
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              #!/bin/bash -xe
+            - |
+              apt-get update -y
+            - |
+              apt-get install -y python-setuptools
+            - |
+              mkdir -p /opt/aws/bin
+            - >
+              wget
+              https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+            - >
+              easy_install --script-dir /opt/aws/bin
+              aws-cfn-bootstrap-latest.tar.gz
+            - '/opt/aws/bin/cfn-init -v '
+            - '         --stack '
+            - !Ref 'AWS::StackName'
+            - '         --resource EC2Instance '
+            - '         --configsets full_install '
+            - '         --region '
+            - !Ref 'AWS::Region'
+            - |+
 
-    #         - '/opt/aws/bin/cfn-signal -e $? '
-    #         - '         --stack '
-    #         - !Ref 'AWS::StackId'
-    #         - '         --resource WebServer '
-    #         - '         --region '
-    #         - !Ref 'AWS::Region'
-    #         - |+
-    # CreationPolicy:
-    #   ResourceSignal:
-    #     Timeout: PT30M
+            - '/opt/aws/bin/cfn-signal -e $? '
+            - '         --stack '
+            - !Ref 'AWS::StackName'
+            - '         --resource EC2Instance '
+            - '         --region '
+            - !Ref 'AWS::Region'
+            - |+
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT30M
         
   WebServerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
