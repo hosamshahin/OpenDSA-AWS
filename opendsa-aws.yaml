@@ -123,61 +123,31 @@ Resources:
         install_and_enable_cfn_hup:
           files:
             /etc/cfn/cfn-hup.conf:
-              content: !Join 
-                - ''
-                - - |
-                    [main]
-                  - stack=
-                  - !Ref 'AWS::StackId'
-                  - |+
-
-                  - region=
-                  - !Ref 'AWS::Region'
-                  - |+
-
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                interval=1
               mode: '000400'
               owner: root
               group: root
             /etc/cfn/hooks.d/cfn-auto-reloader.conf:
-              content: !Join 
-                - ''
-                - - |
-                    [cfn-auto-reloader-hook]
-                  - |
-                    triggers=post.update
-                  - >
-                    path=Resources.EC2Instance.Metadata.AWS::CloudFormation::Init
-                  - 'action=/opt/aws/bin/cfn-init -v '
-                  - '         --stack '
-                  - !Ref 'AWS::StackName'
-                  - '         --resource EC2Instance '
-                  - '         --configsets full_install '
-                  - '         --region '
-                  - !Ref 'AWS::Region'
-                  - |+
-
-                  - |
-                    runas=root
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.LaunchConfig.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource EC2Instance --configsets full_install --region ${AWS::Region}
+                runas=root
             /lib/systemd/system/cfn-hup.service:
-              content: !Join 
-                - ''
-                - - |
-                    [Unit]
-                  - |+
-                    Description=cfn-hup daemon
-
-                  - |
-                    [Service]
-                  - |
-                    Type=simple
-                  - |
-                    ExecStart=/opt/aws/bin/cfn-hup
-                  - |+
-                    Restart=always
-
-                  - |
-                    [Install]
-                  - WantedBy=multi-user.target
+              content: !Sub |
+                [Unit]
+                Description=cfn-hup daemon
+                [Service]
+                Type=simple
+                ExecStart=/opt/aws/bin/cfn-hup
+                Restart=always
+                [Install]
+                WantedBy=multi-user.target                  
           commands:
             01enable_cfn_hup:
               command: systemctl enable cfn-hup.service
@@ -192,39 +162,16 @@ Resources:
       SecurityGroups:
         - !Ref WebServerSecurityGroup
       KeyName: !Ref KeyName
-      UserData: !Base64 
-        'Fn::Join':
-          - ''
-          - - |
-              #!/bin/bash -xe
-            - |
-              apt-get update -y
-            - |
-              apt-get install -y python-setuptools
-            - |
-              mkdir -p /opt/aws/bin
-            - >
-              wget
-              https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
-            - >
-              easy_install --script-dir /opt/aws/bin
-              aws-cfn-bootstrap-latest.tar.gz
-            - '/opt/aws/bin/cfn-init -v '
-            - '         --stack '
-            - !Ref 'AWS::StackName'
-            - '         --resource EC2Instance '
-            - '         --configsets full_install '
-            - '         --region '
-            - !Ref 'AWS::Region'
-            - |+
-
-            - '/opt/aws/bin/cfn-signal -e $? '
-            - '         --stack '
-            - !Ref 'AWS::StackName'
-            - '         --resource EC2Instance '
-            - '         --region '
-            - !Ref 'AWS::Region'
-            - |+
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          apt-get update -y
+          apt-get install -y python-pip
+          apt-get install -y python-setuptools
+          mkdir -p /opt/aws/bin
+          python /usr/lib/python2.7/dist-packages/easy_install.py --script-dir /opt/aws/bin https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+          /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource EC2 --configsets full_install --region ${AWS::Region}
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource EC2 --region ${AWS::Region}          
     CreationPolicy:
       ResourceSignal:
         Timeout: PT30M
