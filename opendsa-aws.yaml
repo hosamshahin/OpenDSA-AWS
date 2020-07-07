@@ -322,9 +322,42 @@ Resources:
               mode: '000500'
               owner: ubuntu
               group: ubuntu
+            /tmp/secrets.yml:
+              content: !Sub |
+                production:
+                  secret_key_base: secret_string
+
+              mode: '000500'
+              owner: ubuntu
+              group: ubuntu
+            /tmp/opendsa_dependencies:
+              content: !Sub |
+                #!/bin/bash
+                su ubuntu << 'EOF'
+
+                source .bash_profile
+                mv -f /tmp/database.yml /home/ubuntu/OpenDSA-LTI/config/
+                sed "s/secret_string/$(bundle exec rake secret)/" /tmp/secrets.yml
+                mv -f /tmp/secrets.yml /home/ubuntu/OpenDSA-LTI/config/
+
+                cd /home/ubuntu/OpenDSA-LTI
+
+                chmod 700 config db
+                chmod 600 config/database.yml config/secrets.yml
+
+                RAILS_ENV=production
+                bundle exec rake db:drop
+                bundle exec rake db:create
+                bundle exec rake db:schema:load
+
+                EOF
+
+              mode: '000500'
+              owner: ubuntu
+              group: ubuntu
           commands:
-            01_opendsa_database_connection:
-              command: mv -f /tmp/database.yml /home/ubuntu/OpenDSA-LTI/config/
+            01_opendsa_dependencies:
+              command: /tmp/opendsa_dependencies > /var/log/opendsa_dependencies.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
     Properties:
