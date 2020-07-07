@@ -124,6 +124,7 @@ Resources:
             - install_ruby_2_4_0
             - install_rails_4
             - install_mysql_5_7
+            - create_opendsa_db
         install_and_enable_cfn_hup:
           files:
             /etc/cfn/cfn-hup.conf:
@@ -233,6 +234,23 @@ Resources:
                   FLUSH PRIVILEGES;
                   SQL
 
+                EOF
+              mode: '000500'
+              owner: ubuntu
+              group: ubuntu
+          commands:
+            01_install_mysql:
+              command: /tmp/install_mysql > /var/log/install_mysql.log
+              cwd: /home/ubuntu/
+              ignoreErrors: "true"
+        create_opendsa_db:
+          files:
+            /tmp/create_opendsa_db:
+              content: !Sub |
+                #!/bin/bash
+                su ubuntu << 'EOF'
+                  source .bash_profile
+
                   mysql -uroot -proot <<SQL
                   CREATE DATABASE opendsa DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;
                   GRANT ALL PRIVILEGES ON opendsa.* to 'opendsa'@'localhost'  IDENTIFIED BY 'opendsa';
@@ -244,8 +262,8 @@ Resources:
               owner: ubuntu
               group: ubuntu
           commands:
-            01_install_mysql:
-              command: /tmp/install_mysql > /var/log/install_mysql.log
+            01_create_opendsa_db:
+              command: /tmp/create_opendsa_db > /var/log/create_opendsa_db.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
     Properties:
