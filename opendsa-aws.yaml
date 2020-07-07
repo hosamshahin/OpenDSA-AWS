@@ -125,6 +125,7 @@ Resources:
             - install_rails_4
             - install_mysql_5_7
             - create_opendsa_db
+            - clone_install_opendsa
         install_and_enable_cfn_hup:
           files:
             /etc/cfn/cfn-hup.conf:
@@ -203,13 +204,15 @@ Resources:
               content: !Sub |
                 #!/bin/bash
                 su ubuntu << 'EOF'
-                  source .bash_profile
-                  gem install rails -v 4 --no-document
-                  gem install bundler:1.17.3 --no-document
-                  \curl -sSL https://deb.nodesource.com/setup_10.x -o /tmp/nodejs.sh
-                  cat /tmp/nodejs.sh | sudo -E bash -
-                  sudo apt-get update
-                  sudo apt-get install -y nodejs
+
+                source .bash_profile
+                gem install rails -v 4 --no-document
+                gem install bundler:1.17.3 --no-document
+                \curl -sSL https://deb.nodesource.com/setup_10.x -o /tmp/nodejs.sh
+                cat /tmp/nodejs.sh | sudo -E bash -
+                sudo apt-get update
+                sudo apt-get install -y nodejs
+
                 EOF
               mode: '000500'
               owner: ubuntu
@@ -225,14 +228,14 @@ Resources:
               content: !Sub |
                 #!/bin/bash
                 su ubuntu << 'EOF'
-                  source .bash_profile
+                source .bash_profile
 
-                  sudo apt-get install -y mysql-server-5.7
+                sudo apt-get install -y mysql-server-5.7
 
-                  sudo mysql <<SQL
-                  ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root';
-                  FLUSH PRIVILEGES;
-                  SQL
+                sudo mysql <<SQL
+                ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root';
+                FLUSH PRIVILEGES;
+                SQL
 
                 EOF
               mode: '000500'
@@ -249,13 +252,13 @@ Resources:
               content: !Sub |
                 #!/bin/bash
                 su ubuntu << 'EOF'
-                  source .bash_profile
 
-                  mysql -uroot -proot <<SQL
-                  CREATE DATABASE opendsa DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;
-                  GRANT ALL PRIVILEGES ON opendsa.* to 'opendsa'@'localhost'  IDENTIFIED BY 'opendsa';
-                  FLUSH PRIVILEGES;
-                  SQL
+                source .bash_profile
+                mysql -uroot -proot <<SQL
+                CREATE DATABASE opendsa DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;
+                GRANT ALL PRIVILEGES ON opendsa.* to 'opendsa'@'localhost'  IDENTIFIED BY 'opendsa';
+                FLUSH PRIVILEGES;
+                SQL
 
                 EOF
               mode: '000500'
@@ -264,6 +267,35 @@ Resources:
           commands:
             01_create_opendsa_db:
               command: /tmp/create_opendsa_db > /var/log/create_opendsa_db.log
+              cwd: /home/ubuntu/
+              ignoreErrors: "true"
+        clone_install_opendsa:
+          files:
+            /tmp/clone_install_opendsa:
+              content: !Sub |
+                #!/bin/bash
+                su ubuntu << 'EOF'
+
+                source .bash_profile
+                cd /home/ubuntu
+                git clone --depth=1 https://github.com/OpenDSA/OpenDSA.git
+                cd OpenDSA
+                make pull
+
+                cd /home/ubuntu
+                git clone --depth=1 https://github.com/OpenDSA/OpenDSA-LTI.git
+                cd OpenDSA-LTI
+                bundle install --deployment --without development test
+
+                ln -s /home/ubuntu/OpenDSA /home/ubuntu/OpenDSA-LTI/public
+
+                EOF
+              mode: '000500'
+              owner: ubuntu
+              group: ubuntu
+          commands:
+            01_clone_install_opendsa:
+              command: /tmp/clone_install_opendsa > /var/log/clone_install_opendsa.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
     Properties:
