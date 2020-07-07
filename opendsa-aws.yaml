@@ -128,6 +128,7 @@ Resources:
             - clone_install_opendsa
             - opendsa_database_connection
             - install_nginx_passenger
+            - configure_nginx_passenger
         install_and_enable_cfn_hup:
           files:
             /etc/cfn/cfn-hup.conf:
@@ -372,17 +373,21 @@ Resources:
                 su ubuntu << 'EOF'
 
                 source .bash_profile
+                sudo apt-get update
                 sudo apt-get install -y nginx
                 sudo ufw allow 'Nginx HTTP'
                 sudo ufw status
 
+                sudo apt-get install -y dirmngr gnupg
                 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 561F9B9CAC40B2F7
                 sudo apt-get install -y apt-transport-https ca-certificates
 
                 sudo sh -c 'echo deb https://oss-binaries.phusionpassenger.com/apt/passenger bionic main > /etc/apt/sources.list.d/passenger.list'
                 sudo apt-get update
+                sudo apt-get install -y libnginx-mod-http-passenger
 
                 if [ ! -f /etc/nginx/modules-enabled/50-mod-http-passenger.conf ]; then sudo ln -s /usr/share/nginx/modules-available/mod-http-passenger.load /etc/nginx/modules-enabled/50-mod-http-passenger.conf ; fi
+                sudo ls /etc/nginx/conf.d/mod-http-passenger.conf
 
                 sudo service nginx restart
 
@@ -395,7 +400,142 @@ Resources:
               command: /tmp/install_nginx_passenger > /var/log/install_nginx_passenger.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
+        configure_nginx_passenger:
+          files:
+            /tmp/nginx.conf:
+              content: !Sub |
+                user ubuntu;
+                worker_processes auto;
+                pid /run/nginx.pid;
+                include /etc/nginx/modules-enabled/*.conf;
 
+                events {
+                        worker_connections 768;
+                        # multi_accept on;
+                }
+
+                http {
+                        ##
+                        # Basic Settings
+                        ##
+
+                        sendfile on;
+                        tcp_nopush on;
+                        tcp_nodelay on;
+                        keepalive_timeout 65;
+                        types_hash_max_size 2048;
+                        # server_tokens off;
+
+                        server_names_hash_bucket_size 64;
+                        # server_name_in_redirect off;
+
+                        include /etc/nginx/mime.types;
+                        default_type application/octet-stream;
+
+                        ##
+                        # SSL Settings
+                        ##
+
+                        ssl_protocols TLSv1 TLSv1.1 TLSv1.2; # Dropping SSLv3, ref: POODLE
+                        ssl_prefer_server_ciphers on;
+
+                        ##
+                        # Logging Settings
+                        ##
+
+                        access_log /var/log/nginx/access.log;
+                        error_log /var/log/nginx/error.log;
+
+                        ##
+                        # Gzip Settings
+                        ##
+
+                        gzip on;
+
+                        # gzip_vary on;
+                        # gzip_proxied any;
+                        # gzip_comp_level 6;
+                        # gzip_buffers 16 8k;
+                        # gzip_http_version 1.1;
+                        # gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+
+                        ##
+                        # Virtual Host Configs
+                        ##
+
+                        include /etc/nginx/conf.d/*.conf;
+                        include /etc/nginx/sites-enabled/*;
+                }
+
+                #mail {
+                #       # See sample authentication script at:
+                #       # http://wiki.nginx.org/ImapAuthenticateWithApachePhpScript
+                #
+                #       # auth_http localhost/auth.php;
+                #       # pop3_capabilities "TOP" "USER";
+                #       # imap_capabilities "IMAP4rev1" "UIDPLUS";
+                #
+                #       server {
+                #               listen     localhost:110;
+                #               protocol   pop3;
+                #               proxy      on;
+                #       }
+                #
+                #       server {
+                #               listen     localhost:143;
+                #               protocol   imap;
+                #               proxy      on;
+                #       }
+                #}
+              mode: '000644'
+              owner: root
+              group: root
+            /tmp/mod-http-passenger.conf:
+              content: !Sub |
+                passenger_root /usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini;
+                passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby;
+              mode: '000644'
+              owner: root
+              group: root
+            /tmp/default:
+              content: !Sub |
+                server {
+                        listen 80;
+                        listen [::]:80;
+                        server_name ec2-54-144-154-214.compute-1.amazonaws.com;
+
+                        passenger_enabled on;
+                        passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby;
+
+                        rails_env    production;
+                        root         /home/ubuntu/OpenDSA-LTI/public;
+
+                        # redirect server error pages to the static page /50x.html
+                        error_page   500 502 503 504  /50x.html;
+                        location = /50x.html {
+                            root   html;
+                        }
+                }
+              mode: '000644'
+              owner: root
+              group: root
+          commands:
+            01_configure_nginx_passenger:
+              command: mv -f /tmp/nginx.conf /etc/nginx/
+              cwd: /home/ubuntu/
+              ignoreErrors: "true"
+            02_configure_nginx_passenger:
+              command: mv -f /tmp/mod-http-passenger.conf /etc/nginx/conf.d/
+              cwd: /home/ubuntu/
+              ignoreErrors: "true"
+            03_configure_nginx_passenger:
+              command: mv -f /tmp/default /etc/nginx/sites-available/
+              cwd: /home/ubuntu/
+              ignoreErrors: "true"
+            04_configure_nginx_passenger:
+              command: sudo service nginx restart
+              cwd: /home/ubuntu/
+              ignoreErrors: "true"
 
     Properties:
       ImageId: !FindInMap
