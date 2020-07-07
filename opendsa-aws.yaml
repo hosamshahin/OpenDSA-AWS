@@ -126,6 +126,7 @@ Resources:
             - install_mysql_5_7
             - create_opendsa_db
             - clone_install_opendsa
+            - opendsa_database_connection
         install_and_enable_cfn_hup:
           files:
             /etc/cfn/cfn-hup.conf:
@@ -296,6 +297,34 @@ Resources:
           commands:
             01_clone_install_opendsa:
               command: /tmp/clone_install_opendsa > /var/log/clone_install_opendsa.log
+              cwd: /home/ubuntu/
+              ignoreErrors: "true"
+        opendsa_database_connection:
+          files:
+            /tmp/database.yml:
+              content: !Sub |
+                production:
+                  adapter: mysql2
+                  database: opendsa
+                  username: opendsa
+                  password: opendsa
+                  host: localhost
+                  strict: false
+
+                development:
+                    adapter: mysql2
+                    database: opendsa
+                    username: opendsa
+                    password: opendsa
+                    host: localhost
+                    strict: false
+
+              mode: '000500'
+              owner: ubuntu
+              group: ubuntu
+          commands:
+            01_opendsa_database_connection:
+              command: mv -f /tmp/database.yml /home/ubuntu/OpenDSA-LTI/config/
               cwd: /home/ubuntu/
               ignoreErrors: "true"
     Properties:
