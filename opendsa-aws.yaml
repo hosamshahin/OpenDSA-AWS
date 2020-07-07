@@ -167,7 +167,7 @@ Resources:
                 #!/bin/bash
                 su ubuntu << 'EOF'
                   sudo apt-get update
-                  sudo apt-get install -y curl gnupg build-essential libmysqlclient-dev
+                  sudo apt-get install -y curl gnupg build-essential libmysqlclient-dev dirmngr libnginx-mod-http-passenger
                 EOF
               mode: '000500'
               owner: ubuntu
@@ -322,12 +322,13 @@ Resources:
               mode: '000500'
               owner: ubuntu
               group: ubuntu
-            /tmp/secrets.yml:
+            /tmp/secrets_init.yml:
               content: !Sub |
                 production:
-                  secret_key_base: secret_string
-
-              mode: '000500'
+                  secret_key_base: prod_secret_string
+                development:
+                  secret_key_base: dev_secret_string
+              mode: '000700'
               owner: ubuntu
               group: ubuntu
             /tmp/opendsa_dependencies:
@@ -336,11 +337,12 @@ Resources:
                 su ubuntu << 'EOF'
 
                 source .bash_profile
-                mv -f /tmp/database.yml /home/ubuntu/OpenDSA-LTI/config/
-                sed "s/secret_string/$(bundle exec rake secret)/" /tmp/secrets.yml
-                mv -f /tmp/secrets.yml /home/ubuntu/OpenDSA-LTI/config/
-
                 cd /home/ubuntu/OpenDSA-LTI
+
+                mv -f /tmp/database.yml /home/ubuntu/OpenDSA-LTI/config/
+                sed "s/prod_secret_string/$(bundle exec rake secret)/" /tmp/secrets_init.yml > /tmp/secrets_prod.yml
+                sed "s/dev_secret_string/$(bundle exec rake secret)/" /tmp/secrets_prod.yml > /tmp/secrets.yml
+                mv -f /tmp/secrets.yml /home/ubuntu/OpenDSA-LTI/config/
 
                 chmod 700 config db
                 chmod 600 config/database.yml config/secrets.yml
@@ -349,6 +351,7 @@ Resources:
                 bundle exec rake db:drop
                 bundle exec rake db:create
                 bundle exec rake db:schema:load
+                bundle exec rake assets:precompile
 
                 EOF
 
@@ -360,6 +363,39 @@ Resources:
               command: /tmp/opendsa_dependencies > /var/log/opendsa_dependencies.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
+        install_nginx_passenger:
+          files:
+            /tmp/install_nginx_passenger:
+              content: !Sub |
+                #!/bin/bash
+                su ubuntu << 'EOF'
+
+                source .bash_profile
+                sudo apt-get install -y nginx
+                sudo ufw allow 'Nginx HTTP'
+                sudo ufw status
+
+                sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 561F9B9CAC40B2F7
+                sudo apt-get install -y apt-transport-https ca-certificates
+
+                sudo sh -c 'echo deb https://oss-binaries.phusionpassenger.com/apt/passenger bionic main > /etc/apt/sources.list.d/passenger.list'
+                sudo apt-get update
+
+                if [ ! -f /etc/nginx/modules-enabled/50-mod-http-passenger.conf ]; then sudo ln -s /usr/share/nginx/modules-available/mod-http-passenger.load /etc/nginx/modules-enabled/50-mod-http-passenger.conf ; fi
+
+                sudo service nginx restart
+
+                EOF
+              mode: '000500'
+              owner: ubuntu
+              group: ubuntu
+          commands:
+            01_clone_install_opendsa:
+              command: /tmp/install_nginx_passenger > /var/log/install_nginx_passenger.log
+              cwd: /home/ubuntu/
+              ignoreErrors: "true"
+
+
     Properties:
       ImageId: !FindInMap
         - AWSRegionArch2AMI
