@@ -582,11 +582,5 @@ Resources:
           CidrIp: !Ref SSHLocation
 Outputs:
   WebsiteURL:
-    Value: !Join
-      - ''
-      - - 'http://'
-        - !GetAtt
-          - WebServer
-          - PublicDnsName
-        - /notes
+    Value: !Sub http://${WebServer.PublicDnsName}
     Description: URL for newly created Rails application
