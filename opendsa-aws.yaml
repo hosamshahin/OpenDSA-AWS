@@ -84,7 +84,7 @@ Parameters:
     Default: 0.0.0.0/0
     AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
-    
+
 Mappings:
   AWSRegionArch2AMI:
     us-east-1:
@@ -122,6 +122,8 @@ Resources:
             - install_and_enable_cfn_hup
             - install_dependencies
             - install_ruby_2_4_0
+            - install_rails_4
+            - install_mysql_5_7
         install_and_enable_cfn_hup:
           files:
             /etc/cfn/cfn-hup.conf:
@@ -149,7 +151,7 @@ Resources:
                 ExecStart=/opt/aws/bin/cfn-hup
                 Restart=always
                 [Install]
-                WantedBy=multi-user.target                  
+                WantedBy=multi-user.target
           commands:
             01enable_cfn_hup:
               command: systemctl enable cfn-hup.service
@@ -160,9 +162,10 @@ Resources:
             /tmp/install_dependencies:
               content: !Sub |
                 #!/bin/bash
-                whoami
-                sudo apt-get update
-                sudo apt-get install -y curl gnupg build-essential libmysqlclient-dev
+                su ubuntu << 'EOF'
+                  sudo apt-get update
+                  sudo apt-get install -y curl gnupg build-essential libmysqlclient-dev
+                EOF
               mode: '000500'
               owner: ubuntu
               group: ubuntu
@@ -176,13 +179,15 @@ Resources:
             /tmp/install_ruby:
               content: !Sub |
                 #!/bin/bash
-                whoami
-                cd /tmp
-                curl -sSL https://get.rvm.io -o rvm.sh
-                cat /tmp/rvm.sh | bash -s stable --rails
-                source /home/ubuntu/.rvm/scripts/rvm
-                rvm install 2.4
-                rvm --default use 2.4
+                su ubuntu << 'EOF'
+                  source .bash_profile
+                  gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+                  curl -sSL https://get.rvm.io -o /tmp/rvm.sh
+                  cat /tmp/rvm.sh | bash -s stable --rails
+                  source /home/ubuntu/.rvm/scripts/rvm
+                  rvm install 2.4
+                  rvm --default use 2.4
+                EOF
               mode: '000500'
               owner: ubuntu
               group: ubuntu
@@ -191,11 +196,63 @@ Resources:
               command: /tmp/install_ruby > /var/log/install_ruby.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
+        install_rails_4:
+          files:
+            /tmp/install_rails:
+              content: !Sub |
+                #!/bin/bash
+                su ubuntu << 'EOF'
+                  source .bash_profile
+                  gem install rails -v 4 --no-document
+                  gem install bundler:1.17.3 --no-document
+                  \curl -sSL https://deb.nodesource.com/setup_10.x -o /tmp/nodejs.sh
+                  cat /tmp/nodejs.sh | sudo -E bash -
+                  sudo apt-get update
+                  sudo apt-get install -y nodejs
+                EOF
+              mode: '000500'
+              owner: ubuntu
+              group: ubuntu
+          commands:
+            01_install_rails:
+              command: /tmp/install_rails > /var/log/install_rails.log
+              cwd: /home/ubuntu/
+              ignoreErrors: "true"
+        install_mysql_5_7:
+          files:
+            /tmp/install_mysql:
+              content: !Sub |
+                #!/bin/bash
+                su ubuntu << 'EOF'
+                  source .bash_profile
+
+                  sudo apt-get install -y mysql-server-5.7
+
+                  sudo mysql <<SQL
+                  ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root';
+                  FLUSH PRIVILEGES;
+                  SQL
+
+                  mysql -uroot -proot <<SQL
+                  CREATE DATABASE opendsa DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;
+                  GRANT ALL PRIVILEGES ON opendsa.* to 'opendsa'@'localhost'  IDENTIFIED BY 'opendsa';
+                  FLUSH PRIVILEGES;
+                  SQL
+
+                EOF
+              mode: '000500'
+              owner: ubuntu
+              group: ubuntu
+          commands:
+            01_install_mysql:
+              command: /tmp/install_mysql > /var/log/install_mysql.log
+              cwd: /home/ubuntu/
+              ignoreErrors: "true"
     Properties:
-      ImageId: !FindInMap 
+      ImageId: !FindInMap
         - AWSRegionArch2AMI
         - !Ref 'AWS::Region'
-        - HVM64 
+        - HVM64
       InstanceType: !Ref InstanceType
       SecurityGroups:
         - !Ref WebServerSecurityGroup
@@ -209,11 +266,11 @@ Resources:
           mkdir -p /opt/aws/bin
           python /usr/lib/python2.7/dist-packages/easy_install.py --script-dir /opt/aws/bin https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
           /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource WebServer --configsets full_install --region ${AWS::Region}
-          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource WebServer --region ${AWS::Region}          
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource WebServer --region ${AWS::Region}
     CreationPolicy:
       ResourceSignal:
         Timeout: PT30M
-        
+
   WebServerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -229,10 +286,10 @@ Resources:
           CidrIp: !Ref SSHLocation
 Outputs:
   WebsiteURL:
-    Value: !Join 
+    Value: !Join
       - ''
       - - 'http://'
-        - !GetAtt 
+        - !GetAtt
           - WebServer
           - PublicDnsName
         - /notes
