@@ -14,13 +14,13 @@ Parameters:
     ConstraintDescription: must be the name of an existing EC2 KeyPair.
     Default: opendsa2
   DBName:
-    Default: MyDatabase
     Description: MySQL database name
     Type: String
     MinLength: '1'
     MaxLength: '64'
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+    Default: opendsa
   DBUser:
     NoEcho: 'true'
     Description: Username for MySQL database access
@@ -29,7 +29,7 @@ Parameters:
     MaxLength: '16'
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
-    Default: DBUser
+    Default: opendsa
   DBPassword:
     NoEcho: 'true'
     Description: Password MySQL database access
@@ -38,7 +38,7 @@ Parameters:
     MaxLength: '41'
     AllowedPattern: '[a-zA-Z0-9]*'
     ConstraintDescription: must contain only alphanumeric characters.
-    Default: DBPassword
+    Default: opendsa
   DBRootPassword:
     NoEcho: 'true'
     Description: Root password for MySQL
@@ -47,7 +47,7 @@ Parameters:
     MaxLength: '41'
     AllowedPattern: '[a-zA-Z0-9]*'
     ConstraintDescription: must contain only alphanumeric characters.
-    Default: DBRootPassword
+    Default: root
   InstanceType:
     Description: WebServer EC2 instance type
     Type: String
@@ -169,7 +169,7 @@ Resources:
                 #!/bin/bash
                 su ubuntu << 'EOF'
                   sudo apt-get update
-                  sudo apt-get install -y curl gnupg build-essential libmysqlclient-dev dirmngr libnginx-mod-http-passenger
+                  sudo apt-get install -y curl gnupg build-essential libmysqlclient-dev
                 EOF
               mode: '000500'
               owner: ubuntu
@@ -236,7 +236,7 @@ Resources:
                 sudo apt-get install -y mysql-server-5.7
 
                 sudo mysql <<SQL
-                ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root';
+                ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DBRootPassword}';
                 FLUSH PRIVILEGES;
                 SQL
 
@@ -257,9 +257,9 @@ Resources:
                 su ubuntu << 'EOF'
 
                 source .bash_profile
-                mysql -uroot -proot <<SQL
-                CREATE DATABASE opendsa DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;
-                GRANT ALL PRIVILEGES ON opendsa.* to 'opendsa'@'localhost'  IDENTIFIED BY 'opendsa';
+                mysql -uroot -p${DBRootPassword} <<SQL
+                CREATE DATABASE ${DBName} DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_general_ci;
+                GRANT ALL PRIVILEGES ON ${DBName}.* to '${DBUser}'@'localhost' IDENTIFIED BY '${DBPassword}';
                 FLUSH PRIVILEGES;
                 SQL
 
@@ -307,19 +307,19 @@ Resources:
               content: !Sub |
                 production:
                   adapter: mysql2
-                  database: opendsa
-                  username: opendsa
-                  password: opendsa
+                  database: ${DBName}
+                  username: ${DBUser}
+                  password: ${DBPassword}
                   host: localhost
                   strict: false
 
                 development:
-                    adapter: mysql2
-                    database: opendsa
-                    username: opendsa
-                    password: opendsa
-                    host: localhost
-                    strict: false
+                  adapter: mysql2
+                  database: ${DBName}
+                  username: ${DBUser}
+                  password: ${DBPassword}
+                  host: localhost
+                  strict: false
 
               mode: '000500'
               owner: ubuntu
@@ -497,12 +497,12 @@ Resources:
               mode: '000644'
               owner: root
               group: root
-            /tmp/default:
+            /tmp/default_init:
               content: !Sub |
                 server {
                         listen 80;
                         listen [::]:80;
-                        server_name ec2-54-144-154-214.compute-1.amazonaws.com;
+                        server_name WebServer_PublicDnsName;
 
                         passenger_enabled on;
                         passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby;
@@ -519,6 +519,14 @@ Resources:
               mode: '000644'
               owner: root
               group: root
+            /tmp/configure_nginx_passenger:
+              content: !Sub |
+                #!/bin/bash
+                sed "s/WebServer_PublicDnsName/$(curl http://169.254.169.254/latest/meta-data/public-hostname)/" /tmp/default_init > /tmp/default
+                mv -f /tmp/default /etc/nginx/sites-available/
+              mode: '000500'
+              owner: ubuntu
+              group: ubuntu
           commands:
             01_configure_nginx_passenger:
               command: mv -f /tmp/nginx.conf /etc/nginx/
@@ -529,14 +537,13 @@ Resources:
               cwd: /home/ubuntu/
               ignoreErrors: "true"
             03_configure_nginx_passenger:
-              command: mv -f /tmp/default /etc/nginx/sites-available/
+              command: /tmp/configure_nginx_passenger > /var/log/configure_nginx_passenger.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
             04_configure_nginx_passenger:
               command: sudo service nginx restart
               cwd: /home/ubuntu/
               ignoreErrors: "true"
-
     Properties:
       ImageId: !FindInMap
         - AWSRegionArch2AMI
@@ -558,7 +565,7 @@ Resources:
           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource WebServer --region ${AWS::Region}
     CreationPolicy:
       ResourceSignal:
-        Timeout: PT30M
+        Timeout: PT2H
 
   WebServerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
