@@ -127,6 +127,7 @@ Resources:
             - create_opendsa_db
             - clone_install_opendsa
             - opendsa_database_connection
+            - install_nginx_passenger
         install_and_enable_cfn_hup:
           files:
             /etc/cfn/cfn-hup.conf:
