@@ -631,17 +631,6 @@ Resources:
           ToPort: '22'
           CidrIp: !Ref SSHLocation
 
-  # DNSRecordSet:
-  #   Type: AWS::Route53::RecordSetGroup
-  #   Properties:
-  #     HostedZoneId: !Ref HostedZoneId
-  #     RecordSets:
-  #     - Name: !Ref DomainName
-  #       ResourceRecords:
-  #       - !GetAtt WebServer.PublicIp
-  #       TTL: '900'
-  #       Type: A
-
   UpdateHostedZoneCustom:
     Type: "AWS::CloudFormation::CustomResource"
     Version: '1.0'
@@ -669,7 +658,7 @@ Resources:
           const changeResourceRecordSets = function (event, context, action) {
             var DomainName = event.ResourceProperties.DomainName
             var HostedZoneId = event.ResourceProperties.HostedZoneId
-            var PublicIP = event.ResourceProperties.PublicIP
+            var PublicIp = event.ResourceProperties.PublicIp
 
             var params = {
               ChangeBatch: {
@@ -680,7 +669,7 @@ Resources:
                       Name: DomainName,
                       ResourceRecords: [
                         {
-                          Value: PublicIP
+                          Value: PublicIp
                         }
                       ],
                       TTL: 900,
