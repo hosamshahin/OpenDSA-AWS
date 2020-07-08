@@ -669,7 +669,7 @@ Resources:
           const changeResourceRecordSets = function (event, context, action) {
             var DomainName = event.ResourceProperties.DomainName
             var HostedZoneId = event.ResourceProperties.HostedZoneId
-            var PublicIp = event.ResourceProperties.PublicIp
+            var PublicIP = event.ResourceProperties.PublicIP
 
             var params = {
               ChangeBatch: {
@@ -680,7 +680,7 @@ Resources:
                       Name: DomainName,
                       ResourceRecords: [
                         {
-                          Value: PublicIp
+                          Value: PublicIP
                         }
                       ],
                       TTL: 900,
@@ -705,6 +705,20 @@ Resources:
                 }
               }
             })
+          }
+
+          exports.handler = (event, context) => {
+            console.log("Event: " + JSON.stringify(event))
+            try {
+              if (event.RequestType === 'Delete') {
+                changeResourceRecordSets(event, context, "DELETE")
+              } else {
+                changeResourceRecordSets(event, context, "UPSERT")
+              }
+            }
+            catch (err) {
+              response.send(event, context, response.FAILED, err)
+            }
           }
 
   UpdateHostedZoneRole:
