@@ -8,6 +8,12 @@ Description: >-
   template. **WARNING** This template creates an Amazon EC2 instance. You will
   be billed for the AWS resources used if you create a stack from this template.
 Parameters:
+  DomainName:
+    Type: String
+    Default: opendsa.net
+  HostedZoneId:
+    Type: String
+    Default: Z05182552N6AN2Z4OAS8I
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
     Type: 'AWS::EC2::KeyPair::KeyName'
@@ -128,6 +134,7 @@ Resources:
             - clone_install_opendsa
             - opendsa_database_connection
             - install_nginx_passenger
+            - generate_certificate
             - configure_nginx_passenger
         install_and_enable_cfn_hup:
           files:
@@ -176,7 +183,7 @@ Resources:
               group: ubuntu
           commands:
             01_install_ruby:
-              command: /tmp/install_dependencies > /var/log/install_dependencies.log
+              command: /tmp/install_dependencies > /var/log/odsa_install_dependencies.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
         install_ruby_2_4_0:
@@ -198,7 +205,7 @@ Resources:
               group: ubuntu
           commands:
             01_install_ruby:
-              command: /tmp/install_ruby > /var/log/install_ruby.log
+              command: /tmp/install_ruby > /var/log/odsa_install_ruby.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
         install_rails_4:
@@ -222,7 +229,7 @@ Resources:
               group: ubuntu
           commands:
             01_install_rails:
-              command: /tmp/install_rails > /var/log/install_rails.log
+              command: /tmp/install_rails > /var/log/odsa_install_rails.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
         install_mysql_5_7:
@@ -246,7 +253,7 @@ Resources:
               group: ubuntu
           commands:
             01_install_mysql:
-              command: /tmp/install_mysql > /var/log/install_mysql.log
+              command: /tmp/install_mysql > /var/log/odsa_install_mysql.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
         create_opendsa_db:
@@ -269,7 +276,7 @@ Resources:
               group: ubuntu
           commands:
             01_create_opendsa_db:
-              command: /tmp/create_opendsa_db > /var/log/create_opendsa_db.log
+              command: /tmp/create_opendsa_db > /var/log/odsa_create_opendsa_db.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
         clone_install_opendsa:
@@ -298,7 +305,7 @@ Resources:
               group: ubuntu
           commands:
             01_clone_install_opendsa:
-              command: /tmp/clone_install_opendsa > /var/log/clone_install_opendsa.log
+              command: /tmp/clone_install_opendsa > /var/log/odsa_clone_install_opendsa.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
         opendsa_database_connection:
@@ -364,7 +371,31 @@ Resources:
               group: ubuntu
           commands:
             01_opendsa_dependencies:
-              command: /tmp/opendsa_dependencies > /var/log/opendsa_dependencies.log
+              command: /tmp/opendsa_dependencies > /var/log/odsa_opendsa_dependencies.log
+              cwd: /home/ubuntu/
+              ignoreErrors: "true"
+        generate_certificate:
+          files:
+            /tmp/generate_certificate:
+              content: !Sub |
+                #!/bin/bash
+                su ubuntu << 'EOF'
+
+                source .bash_profile
+                sudo apt-get install software-properties-common
+                sudo add-apt-repository ppa:certbot/certbot
+                sudo apt-get update
+                sudo apt-get install python-certbot-nginx
+                sudo certbot certonly --nginx -d ${DomainName} --dry-run
+                sudo certbot certonly --nginx -d ${DomainName}
+
+                EOF
+              mode: '000500'
+              owner: ubuntu
+              group: ubuntu
+          commands:
+            01_clone_install_opendsa:
+              command: /tmp/generate_certificate > /var/log/odsa_generate_certificate.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
         install_nginx_passenger:
@@ -399,7 +430,7 @@ Resources:
               group: ubuntu
           commands:
             01_clone_install_opendsa:
-              command: /tmp/install_nginx_passenger > /var/log/install_nginx_passenger.log
+              command: /tmp/install_nginx_passenger > /var/log/odsa_install_nginx_passenger.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
         configure_nginx_passenger:
@@ -499,24 +530,38 @@ Resources:
               mode: '000644'
               owner: root
               group: root
-            /tmp/default_init:
+            /tmp/default:
               content: !Sub |
                 server {
+                  server_name ${DomainName};
+
+                  passenger_enabled on;
+                  passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby;
+
+                  rails_env    production;
+                  root         /home/ubuntu/OpenDSA-LTI/public;
+
+                  # redirect server error pages to the static page /50x.html
+                  error_page   500 502 503 504  /50x.html;
+                  location = /50x.html {
+                      root   html;
+                  }
+
+                  listen [::]:443 ssl ipv6only=on; # managed by Certbot
+                  listen 443 ssl; # managed by Certbot
+                    ssl_certificate /etc/letsencrypt/live/${DomainName}/fullchain.pem; # managed by Certbot
+                    ssl_certificate_key /etc/letsencrypt/live/${DomainName}/privkey.pem; # managed by Certbot
+                  include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+                  ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+                }
+                server {
+                    if ($host = ${DomainName}) {
+                        return 301 https://$host$request_uri;
+                    } # managed by Certbot
                         listen 80;
                         listen [::]:80;
-                        server_name WebServer_PublicDnsName;
-
-                        passenger_enabled on;
-                        passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby;
-
-                        rails_env    production;
-                        root         /home/ubuntu/OpenDSA-LTI/public;
-
-                        # redirect server error pages to the static page /50x.html
-                        error_page   500 502 503 504  /50x.html;
-                        location = /50x.html {
-                            root   html;
-                        }
+                        server_name ${DomainName};
+                    return 404; # managed by Certbot
                 }
               mode: '000644'
               owner: root
@@ -524,7 +569,6 @@ Resources:
             /tmp/configure_nginx_passenger:
               content: !Sub |
                 #!/bin/bash
-                sed "s/WebServer_PublicDnsName/$(curl http://169.254.169.254/latest/meta-data/public-hostname)/" /tmp/default_init > /tmp/default
                 mv -f /tmp/default /etc/nginx/sites-available/
               mode: '000500'
               owner: ubuntu
@@ -539,7 +583,7 @@ Resources:
               cwd: /home/ubuntu/
               ignoreErrors: "true"
             03_configure_nginx_passenger:
-              command: /tmp/configure_nginx_passenger > /var/log/configure_nginx_passenger.log
+              command: /tmp/configure_nginx_passenger > /var/log/odsa_configure_nginx_passenger.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
             04_configure_nginx_passenger:
@@ -582,6 +626,17 @@ Resources:
           FromPort: '22'
           ToPort: '22'
           CidrIp: !Ref SSHLocation
+
+  DNSRecordSet:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      ResourceRecords:
+      - !GetAtt WebServer.PublicIp
+      TTL: '900'
+      Type: A
+
 Outputs:
   WebsiteURL:
     Value: !Sub http://${WebServer.PublicDnsName}
