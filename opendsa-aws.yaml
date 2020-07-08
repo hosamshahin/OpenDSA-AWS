@@ -120,7 +120,7 @@ Mappings:
 
 Resources:
   WebServer:
-    Type: 'AWS::EC2::Instance'
+    Type: AWS::EC2::Instance
     Metadata:
       'AWS::CloudFormation::Init':
         configSets:
@@ -631,15 +631,97 @@ Resources:
           ToPort: '22'
           CidrIp: !Ref SSHLocation
 
-  DNSRecordSet:
-    Type: AWS::Route53::RecordSet
+  # DNSRecordSet:
+  #   Type: AWS::Route53::RecordSetGroup
+  #   Properties:
+  #     HostedZoneId: !Ref HostedZoneId
+  #     RecordSets:
+  #     - Name: !Ref DomainName
+  #       ResourceRecords:
+  #       - !GetAtt WebServer.PublicIp
+  #       TTL: '900'
+  #       Type: A
+
+  UpdateHostedZoneCustom:
+    Type: "AWS::CloudFormation::CustomResource"
+    Version: '1.0'
     Properties:
+      ServiceToken: !GetAtt UpdateHostedZone.Arn
+      DomainName: !Ref DomainName
+      PublicIp: !GetAtt WebServer.PublicIp
       HostedZoneId: !Ref HostedZoneId
-      Name: !Ref DomainName
-      ResourceRecords:
-      - !GetAtt WebServer.PublicIp
-      TTL: '900'
-      Type: A
+      Capabilities:
+        - CAPABILITY_NAMED_IAM
+
+  UpdateHostedZone:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Role: !GetAtt UpdateHostedZoneRole.Arn
+      Runtime: "nodejs10.x"
+      Timeout: 10
+      Code:
+        ZipFile: |
+          const AWS = require('aws-sdk')
+          const response = require('cfn-response')
+          const route53 = new AWS.Route53({ apiVersion: '2013-04-01' })
+
+          const changeResourceRecordSets = function (event, context, action) {
+            var DomainName = event.ResourceProperties.DomainName
+            var HostedZoneId = event.ResourceProperties.HostedZoneId
+            var PublicIp = event.ResourceProperties.PublicIp
+
+            var params = {
+              ChangeBatch: {
+                Changes: [
+                  {
+                    Action: "UPSET",
+                    ResourceRecordSet: {
+                      Name: DomainName,
+                      ResourceRecords: [
+                        {
+                          Value: PublicIp
+                        }
+                      ],
+                      TTL: 900,
+                      Type: "A"
+                    }
+                  }
+                ],
+                Comment: `Web server for ${DomainName}`
+              },
+              HostedZoneId: HostedZoneId
+            };
+
+            route53.changeResourceRecordSets(params, function (err, data) {
+              console.log(err)
+              if (err) {
+                throw err
+              } else {
+                if (action === 'Update') {
+                  response.send(event, context, response.SUCCESS, data, JSON.parse(event.PhysicalResourceId))
+                } else {
+                  response.send(event, context, response.SUCCESS, data, DomainName)
+                }
+              }
+            })
+          }
+
+  UpdateHostedZoneRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonRoute53FullAccess"
+        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 
 Outputs:
   WebsiteURL:
