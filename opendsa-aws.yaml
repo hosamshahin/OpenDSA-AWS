@@ -286,7 +286,7 @@ Resources:
                 make pull
 
                 cd /home/ubuntu
-                git clone --depth=1 https://github.com/OpenDSA/OpenDSA-LTI.git
+                git clone --depth=1 https://github.com/hosamshahin/OpenDSA-LTI.git
                 cd OpenDSA-LTI
                 bundle install --deployment --without development test
 
