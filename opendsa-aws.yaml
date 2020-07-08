@@ -408,7 +408,7 @@ Resources:
                 source .bash_profile
                 sudo apt-get update
                 sudo apt-get install -y nginx
-                sudo ufw allow 'Nginx HTTP'
+                sudo ufw allow 'Nginx FULL'
                 sudo ufw status
 
                 sudo apt-get install -y dirmngr gnupg
@@ -618,6 +618,10 @@ Resources:
     Properties:
       GroupDescription: Enable HTTP and SSH access
       SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: '80'
           ToPort: '80'
