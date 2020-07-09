@@ -8,6 +8,10 @@ Description: >-
   template. **WARNING** This template creates an Amazon EC2 instance. You will
   be billed for the AWS resources used if you create a stack from this template.
 Parameters:
+  Email:
+    Type: String
+    Default: example@mail.com
+    Description: Email address for important account notifications. Please provide your instiution .edu email address.
   DomainName:
     Type: String
     Default: opendsa.net
@@ -134,7 +138,7 @@ Resources:
             - clone_install_opendsa
             - opendsa_database_connection
             - install_nginx_passenger
-            - generate_certificate
+            # - generate_certificate
             - configure_nginx_passenger
         install_and_enable_cfn_hup:
           files:
@@ -374,30 +378,6 @@ Resources:
               command: /tmp/opendsa_dependencies > /var/log/odsa_opendsa_dependencies.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
-        generate_certificate:
-          files:
-            /tmp/generate_certificate:
-              content: !Sub |
-                #!/bin/bash
-                su ubuntu << 'EOF'
-
-                source .bash_profile
-                sudo apt-get install software-properties-common
-                sudo add-apt-repository ppa:certbot/certbot
-                sudo apt-get update
-                sudo apt-get install python-certbot-nginx
-                sudo certbot certonly --nginx -d ${DomainName} --dry-run
-                sudo certbot certonly --nginx -d ${DomainName}
-
-                EOF
-              mode: '000500'
-              owner: ubuntu
-              group: ubuntu
-          commands:
-            01_clone_install_opendsa:
-              command: /tmp/generate_certificate > /var/log/odsa_generate_certificate.log
-              cwd: /home/ubuntu/
-              ignoreErrors: "true"
         install_nginx_passenger:
           files:
             /tmp/install_nginx_passenger:
@@ -431,6 +411,34 @@ Resources:
           commands:
             01_clone_install_opendsa:
               command: /tmp/install_nginx_passenger > /var/log/odsa_install_nginx_passenger.log
+              cwd: /home/ubuntu/
+              ignoreErrors: "true"
+        generate_certificate:
+          files:
+            /tmp/generate_certificate:
+              content: !Sub |
+                #!/bin/bash
+                su ubuntu << 'EOF'
+
+                source .bash_profile
+                sudo apt-get update
+                sudo apt-get install -y software-properties-common
+                sudo add-apt-repository -y universe
+                sudo add-apt-repository -y ppa:certbot/certbot
+                sudo apt-get update
+
+                sudo apt-get install -y certbot python3-certbot-nginx
+
+                sudo certbot certonly --nginx -d ${DomainName} --register-unsafely-without-email --agree-tos
+                sudo certbot certonly --nginx -d opendsa.net --register-unsafely-without-email --agree-tos
+
+                EOF
+              mode: '000500'
+              owner: ubuntu
+              group: ubuntu
+          commands:
+            01_clone_install_opendsa:
+              command: /tmp/generate_certificate > /var/log/odsa_generate_certificate.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
         configure_nginx_passenger:
@@ -499,27 +507,6 @@ Resources:
                         include /etc/nginx/conf.d/*.conf;
                         include /etc/nginx/sites-enabled/*;
                 }
-
-                #mail {
-                #       # See sample authentication script at:
-                #       # http://wiki.nginx.org/ImapAuthenticateWithApachePhpScript
-                #
-                #       # auth_http localhost/auth.php;
-                #       # pop3_capabilities "TOP" "USER";
-                #       # imap_capabilities "IMAP4rev1" "UIDPLUS";
-                #
-                #       server {
-                #               listen     localhost:110;
-                #               protocol   pop3;
-                #               proxy      on;
-                #       }
-                #
-                #       server {
-                #               listen     localhost:143;
-                #               protocol   imap;
-                #               proxy      on;
-                #       }
-                #}
               mode: '000644'
               owner: root
               group: root
@@ -533,35 +520,21 @@ Resources:
             /tmp/default:
               content: !Sub |
                 server {
-                  server_name ${DomainName};
-
-                  passenger_enabled on;
-                  passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby;
-
-                  rails_env    production;
-                  root         /home/ubuntu/OpenDSA-LTI/public;
-
-                  # redirect server error pages to the static page /50x.html
-                  error_page   500 502 503 504  /50x.html;
-                  location = /50x.html {
-                      root   html;
-                  }
-
-                  listen [::]:443 ssl ipv6only=on; # managed by Certbot
-                  listen 443 ssl; # managed by Certbot
-                    ssl_certificate /etc/letsencrypt/live/${DomainName}/fullchain.pem; # managed by Certbot
-                    ssl_certificate_key /etc/letsencrypt/live/${DomainName}/privkey.pem; # managed by Certbot
-                  include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
-                  ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
-                }
-                server {
-                    if ($host = ${DomainName}) {
-                        return 301 https://$host$request_uri;
-                    } # managed by Certbot
                         listen 80;
                         listen [::]:80;
                         server_name ${DomainName};
-                    return 404; # managed by Certbot
+
+                        passenger_enabled on;
+                        passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby;
+
+                        rails_env    production;
+                        root         /home/ubuntu/OpenDSA-LTI/public;
+
+                        # redirect server error pages to the static page /50x.html
+                        error_page   500 502 503 504  /50x.html;
+                        location = /50x.html {
+                            root   html;
+                        }
                 }
               mode: '000644'
               owner: root
@@ -631,16 +604,16 @@ Resources:
           ToPort: '22'
           CidrIp: !Ref SSHLocation
 
-  UpdateHostedZoneCustom:
-    Type: "AWS::CloudFormation::CustomResource"
-    Version: '1.0'
-    Properties:
-      ServiceToken: !GetAtt UpdateHostedZone.Arn
-      DomainName: !Ref DomainName
-      PublicIp: !GetAtt WebServer.PublicIp
-      HostedZoneId: !Ref HostedZoneId
-      Capabilities:
-        - CAPABILITY_NAMED_IAM
+  # UpdateHostedZoneCustom:
+  #   Type: "AWS::CloudFormation::CustomResource"
+  #   Version: '1.0'
+  #   Properties:
+  #     ServiceToken: !GetAtt UpdateHostedZone.Arn
+  #     DomainName: !Ref DomainName
+  #     PublicIp: !GetAtt WebServer.PublicIp
+  #     HostedZoneId: !Ref HostedZoneId
+  #     Capabilities:
+  #       - CAPABILITY_NAMED_IAM
 
   UpdateHostedZone:
     Type: AWS::Lambda::Function
@@ -664,7 +637,7 @@ Resources:
               ChangeBatch: {
                 Changes: [
                   {
-                    Action: "UPSET",
+                    Action: "UPSERT",
                     ResourceRecordSet: {
                       Name: DomainName,
                       ResourceRecords: [
