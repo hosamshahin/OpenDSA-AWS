@@ -758,7 +758,7 @@ Resources:
           const response = require('cfn-response')
           const route53 = new AWS.Route53({ apiVersion: '2013-04-01' })
 
-          const changeResourceRecordSets = function (event, context, action) {
+          const changeResourceRecordSets = function (event, context) {
             var DomainName = event.ResourceProperties.DomainName
             var HostedZoneId = event.ResourceProperties.HostedZoneId
             var PublicIp = event.ResourceProperties.PublicIp
@@ -790,11 +790,7 @@ Resources:
               if (err) {
                 throw err
               } else {
-                if (action === 'Update') {
-                  response.send(event, context, response.SUCCESS, data, JSON.parse(event.PhysicalResourceId))
-                } else {
-                  response.send(event, context, response.SUCCESS, data, DomainName)
-                }
+                response.send(event, context, response.SUCCESS, data, DomainName)
               }
             })
           }
@@ -803,9 +799,9 @@ Resources:
             console.log("Event: " + JSON.stringify(event))
             try {
               if (event.RequestType === 'Delete') {
-                changeResourceRecordSets(event, context, "DELETE")
+                response.send(event, context, response.SUCCESS)
               } else {
-                changeResourceRecordSets(event, context, "UPSERT")
+                changeResourceRecordSets(event, context)
               }
             }
             catch (err) {
