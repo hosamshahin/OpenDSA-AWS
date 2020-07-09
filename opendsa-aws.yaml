@@ -395,6 +395,8 @@ Resources:
                 bundle install --deployment --without development test
 
                 ln -s /home/ubuntu/OpenDSA /home/ubuntu/OpenDSA-LTI/public
+                ln -s /home/ubuntu/OpenDSA/RST /home/ubuntu/OpenDSA-LTI/RST
+                ln -s /home/ubuntu/OpenDSA/config /home/ubuntu/OpenDSA-LTI/Configuration
 
                 EOF
               mode: '000500'
