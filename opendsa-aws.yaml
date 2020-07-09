@@ -158,24 +158,13 @@ Resources:
     Properties:
       Domain: vpc
 
-  SSHSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      VpcId: !Ref VPC
-      GroupDescription: Enable SSH access via port 22
-      SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
-          FromPort: 22
-          IpProtocol: tcp
-          ToPort: 22
-
   NetworkInterface:
     Type: AWS::EC2::NetworkInterface
     Properties:
       SubnetId: !Ref PublicSubnet
       Description: Interface for controlling traffic such as SSH
       GroupSet:
-      - !Ref SSHSecurityGroup
+      - !Ref WebServerSecurityGroup
       SourceDestCheck: true
       Tags:
       - Key: Network
@@ -241,8 +230,9 @@ Resources:
             - clone_install_opendsa
             - opendsa_database_connection
             - install_nginx_passenger
-            # - generate_certificate
             - configure_nginx_passenger
+            - generate_certificate
+            - configure_ssl_certificate
         install_and_enable_cfn_hup:
           files:
             /etc/cfn/cfn-hup.conf:
@@ -666,14 +656,66 @@ Resources:
               command: sudo service nginx restart
               cwd: /home/ubuntu/
               ignoreErrors: "true"
+        configure_ssl_certificate:
+          files:
+            /tmp/default:
+              content: !Sub |
+                server {
+                  server_name ${DomainName};
+
+                  passenger_enabled on;
+                  passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby;
+
+                  rails_env    production;
+                  root         /home/ubuntu/OpenDSA-LTI/public;
+
+                  # redirect server error pages to the static page /50x.html
+                  error_page   500 502 503 504  /50x.html;
+                  location = /50x.html {
+                      root   html;
+                  }
+
+                  listen [::]:443 ssl ipv6only=on; # managed by Certbot
+                  listen 443 ssl; # managed by Certbot
+                    ssl_certificate /etc/letsencrypt/live/${DomainName}/fullchain.pem; # managed by Certbot
+                    ssl_certificate_key /etc/letsencrypt/live/${DomainName}/privkey.pem; # managed by Certbot
+                  include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+                  ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+                }
+                server {
+                    if ($host = ${DomainName}) {
+                        return 301 https://$host$request_uri;
+                    } # managed by Certbot
+                        listen 80;
+                        listen [::]:80;
+                        server_name ${DomainName};
+                    return 404; # managed by Certbot
+                }
+              mode: '000644'
+              owner: root
+              group: root
+            /tmp/configure_ssl_certificate:
+              content: !Sub |
+                #!/bin/bash
+                mv -f /tmp/default /etc/nginx/sites-available/
+              mode: '000500'
+              owner: ubuntu
+              group: ubuntu
+          commands:
+            01_configure_ssl_certificate:
+              command: /tmp/configure_ssl_certificate > /var/log/odsa_configure_ssl_certificate.log
+              cwd: /home/ubuntu/
+              ignoreErrors: "true"
+            02_configure_ssl_certificate:
+              command: sudo service nginx restart
+              cwd: /home/ubuntu/
+              ignoreErrors: "true"
     Properties:
       ImageId: !FindInMap
         - AWSRegionArch2AMI
         - !Ref 'AWS::Region'
         - HVM64
       InstanceType: !Ref InstanceType
-      SecurityGroups:
-        - !Ref WebServerSecurityGroup
       KeyName: !Ref KeyName
       NetworkInterfaces:
         - NetworkInterfaceId: !Ref NetworkInterface
