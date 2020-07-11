@@ -272,14 +272,44 @@ Resources:
               content: !Sub |
                 #!/bin/bash
                 su ubuntu << 'EOF'
-                  sudo apt-get update
-                  sudo apt-get install -y curl gnupg build-essential libmysqlclient-dev
+                sudo apt-get update
+                sudo add-apt-repository -y universe
+                sudo apt-get update
+                sudo apt-get install -y python
+                sudo apt-get install -y python-dev
+                sudo apt-get install -y python-pip
+                sudo apt-get install -y python-sphinx
+                sudo apt-get install -y python-feedvalidator
+                sudo apt-get install -y python-software-properties
+                sudo apt-get install -y software-properties-common
+                sudo apt-get install -y curl
+                sudo apt-get install -y gnupg
+                sudo apt-get install -y zlib1g-dev
+                sudo apt-get install -y build-essential
+                sudo apt-get install -y libmysqlclient-dev
+                sudo apt-get install -y dkms
+                sudo apt-get install -y libxslt-dev
+                sudo apt-get install -y libpq-dev
+                sudo apt-get install -y libmariadbclient-dev
+                sudo apt-get install -y libcurl4-gnutls-dev
+                sudo apt-get install -y libevent-dev
+                sudo apt-get install -y libffi-dev
+                sudo apt-get install -y libssl-dev
+                sudo apt-get install -y stunnel4
+                sudo apt-get install -y libsqlite3-dev
+                sudo apt-get install -y libreadline-dev
+                sudo apt-get install -y libyaml-dev
+                sudo apt-get install -y libxml2
+                sudo apt-get install -y libxml2-dev
+                sudo apt-get install -y libxslt1-dev
+                sudo apt-get install -y libcurl4-openssl-dev
+                sudo apt-get install -y dirmngr
                 EOF
               mode: '000500'
               owner: ubuntu
               group: ubuntu
           commands:
-            01_install_ruby:
+            01_install_dependencies:
               command: /tmp/install_dependencies > /var/log/odsa_install_dependencies.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
@@ -289,13 +319,12 @@ Resources:
               content: !Sub |
                 #!/bin/bash
                 su ubuntu << 'EOF'
-                  source .bash_profile
-                  gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
-                  curl -sSL https://get.rvm.io -o /tmp/rvm.sh
-                  cat /tmp/rvm.sh | bash -s stable --rails
-                  source /home/ubuntu/.rvm/scripts/rvm
-                  rvm install 2.4
-                  rvm --default use 2.4
+                gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3 7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+                curl -sSL https://get.rvm.io -o /tmp/rvm.sh
+                cat /tmp/rvm.sh | bash -s stable --rails
+                source /home/ubuntu/.rvm/scripts/rvm
+                rvm install 2.4
+                rvm --default use 2.4
                 EOF
               mode: '000500'
               owner: ubuntu
@@ -315,10 +344,6 @@ Resources:
                 source .bash_profile
                 gem install rails -v 4 --no-document
                 gem install bundler:1.17.3 --no-document
-                \curl -sSL https://deb.nodesource.com/setup_10.x -o /tmp/nodejs.sh
-                cat /tmp/nodejs.sh | sudo -E bash -
-                sudo apt-get update
-                sudo apt-get install -y nodejs
 
                 EOF
               mode: '000500'
@@ -335,8 +360,8 @@ Resources:
               content: !Sub |
                 #!/bin/bash
                 su ubuntu << 'EOF'
-                source .bash_profile
 
+                source .bash_profile
                 sudo apt-get install -y mysql-server-5.7
 
                 sudo mysql <<SQL
@@ -386,17 +411,34 @@ Resources:
                 source .bash_profile
                 cd /home/ubuntu
                 git clone --depth=1 https://github.com/OpenDSA/OpenDSA.git
-                cd OpenDSA
+                cd /home/ubuntu/OpenDSA
                 make pull
+
+                curl -sL https://deb.nodesource.com/setup_10.x -o /home/ubuntu/nodesource_setup.sh
+                sudo bash /home/ubuntu/nodesource_setup.sh
+                sudo apt install nodejs
+
+                sudo npm install -g jshint
+                sudo npm install -g csslint
+                sudo npm install -g jsonlint
+                sudo npm install -g uglify-js
+                sudo npm install -g bower
+
+                pip install -r /home/ubuntu/OpenDSA/requirements.txt --upgrade
+                pip install --upgrade beautifulsoup4
 
                 cd /home/ubuntu
                 git clone --depth=1 https://github.com/hosamshahin/OpenDSA-LTI.git
-                cd OpenDSA-LTI
+                cd /home/ubuntu/OpenDSA-LTI
                 bundle install --deployment --without development test
 
                 ln -s /home/ubuntu/OpenDSA /home/ubuntu/OpenDSA-LTI/public
-                ln -s /home/ubuntu/OpenDSA/RST /home/ubuntu/OpenDSA-LTI/RST
-                ln -s /home/ubuntu/OpenDSA/config /home/ubuntu/OpenDSA-LTI/Configuration
+                ln -s /home/ubuntu/OpenDSA/RST /home/ubuntu/OpenDSA-LTI
+                ln -s /home/ubuntu/OpenDSA/config /home/ubuntu/OpenDSA-LTI
+
+                # Install Java 8 and Ant
+                sudo apt-get install -y default-jre
+                sudo apt-get install -y ant
 
                 EOF
               mode: '000500'
@@ -462,6 +504,7 @@ Resources:
                 bundle exec rake db:seed
                 bundle exec rake db:populate
                 bundle exec rake assets:precompile
+                bundle exec rake jobs:work
 
                 EOF
 
@@ -486,7 +529,6 @@ Resources:
                 sudo ufw allow 'Nginx FULL'
                 sudo ufw status
 
-                sudo apt-get install -y dirmngr gnupg
                 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 561F9B9CAC40B2F7
                 sudo apt-get install -y apt-transport-https ca-certificates
 
@@ -504,7 +546,7 @@ Resources:
               owner: ubuntu
               group: ubuntu
           commands:
-            01_clone_install_opendsa:
+            01_install_nginx_passenger:
               command: /tmp/install_nginx_passenger > /var/log/odsa_install_nginx_passenger.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
@@ -516,9 +558,6 @@ Resources:
                 su ubuntu << 'EOF'
 
                 source .bash_profile
-                sudo apt-get update
-                sudo apt-get install -y software-properties-common
-                sudo add-apt-repository -y universe
                 sudo add-apt-repository -y ppa:certbot/certbot
                 sudo apt-get update
 
@@ -532,7 +571,7 @@ Resources:
               owner: ubuntu
               group: ubuntu
           commands:
-            01_clone_install_opendsa:
+            01_generate_certificate:
               command: /tmp/generate_certificate > /var/log/odsa_generate_certificate.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
