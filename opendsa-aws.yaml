@@ -282,6 +282,7 @@ Resources:
                 sudo apt-get install -y python-feedvalidator
                 sudo apt-get install -y python-software-properties
                 sudo apt-get install -y software-properties-common
+                sudo apt-get install -y ec2-instance-connect
                 sudo apt-get install -y curl
                 sudo apt-get install -y gnupg
                 sudo apt-get install -y zlib1g-dev
@@ -409,34 +410,36 @@ Resources:
                 su ubuntu << 'EOF'
 
                 source .bash_profile
-                cd /home/ubuntu
-                git clone --depth=1 https://github.com/OpenDSA/OpenDSA.git
+                git clone --depth=1 https://github.com/OpenDSA/OpenDSA.git /home/ubuntu/OpenDSA
                 cd /home/ubuntu/OpenDSA
                 make pull
 
-                curl -sL https://deb.nodesource.com/setup_10.x -o /home/ubuntu/nodesource_setup.sh
-                sudo bash /home/ubuntu/nodesource_setup.sh
-                sudo apt install nodejs
+                # install nodejs and npm
+                curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+                sudo apt-get install -y nodejs
 
                 sudo npm install -g jshint
                 sudo npm install -g csslint
                 sudo npm install -g jsonlint
                 sudo npm install -g uglify-js
                 sudo npm install -g bower
+                sudo chown -R ubuntu .config
 
+                # install OpenDSA dependencies
                 pip install -r /home/ubuntu/OpenDSA/requirements.txt --upgrade
                 pip install --upgrade beautifulsoup4
 
-                cd /home/ubuntu
-                git clone --depth=1 https://github.com/hosamshahin/OpenDSA-LTI.git
+                # clone and install OpenDSA-LTI dependencies
+                git clone --depth=1 https://github.com/hosamshahin/OpenDSA-LTI.git /home/ubuntu/OpenDSA-LTI
                 cd /home/ubuntu/OpenDSA-LTI
                 bundle install --deployment --without development test
 
+                # make a link from OpenDSA into OpenDSA-LTI
                 ln -s /home/ubuntu/OpenDSA /home/ubuntu/OpenDSA-LTI/public
                 ln -s /home/ubuntu/OpenDSA/RST /home/ubuntu/OpenDSA-LTI
-                ln -s /home/ubuntu/OpenDSA/config /home/ubuntu/OpenDSA-LTI
+                ln -s /home/ubuntu/OpenDSA/config /home/ubuntu/OpenDSA-LTI/Configuration
 
-                # Install Java 8 and Ant
+                # Install Java and Ant
                 sudo apt-get install -y default-jre
                 sudo apt-get install -y ant
 
@@ -494,8 +497,8 @@ Resources:
                 sed "s/dev_secret_string/$(bundle exec rake secret)/" /tmp/secrets_prod.yml > /tmp/secrets.yml
                 mv -f /tmp/secrets.yml /home/ubuntu/OpenDSA-LTI/config/
 
-                chmod 700 config db
-                chmod 600 config/database.yml config/secrets.yml
+                chmod 700 /home/ubuntu/OpenDSA-LTI/config /home/ubuntu/OpenDSA-LTI/db
+                chmod 600 /home/ubuntu/OpenDSA-LTI/config/database.yml /home/ubuntu/OpenDSA-LTI/config/secrets.yml
 
                 RAILS_ENV=production
                 bundle exec rake db:drop
