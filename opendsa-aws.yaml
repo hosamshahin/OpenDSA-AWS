@@ -414,16 +414,6 @@ Resources:
                 cd /home/ubuntu/OpenDSA
                 make pull
 
-                # install nodejs and npm
-                curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
-                sudo apt-get install -y nodejs
-
-                sudo npm install -g jshint
-                sudo npm install -g csslint
-                sudo npm install -g jsonlint
-                sudo npm install -g uglify-js
-                sudo npm install -g bower
-                sudo chown -R ubuntu .config
 
                 # install OpenDSA dependencies
                 pip install -r /home/ubuntu/OpenDSA/requirements.txt --upgrade
@@ -442,6 +432,15 @@ Resources:
                 # Install Java and Ant
                 sudo apt-get install -y default-jre
                 sudo apt-get install -y ant
+
+                # install nodejs and npm
+                curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
+                sudo apt-get install -y nodejs
+
+                sudo npm install -g jshint
+                sudo npm install -g csslint
+                sudo npm install -g jsonlint
+                sudo npm install -g uglify-js
 
                 EOF
               mode: '000500'
@@ -507,7 +506,7 @@ Resources:
                 bundle exec rake db:seed
                 bundle exec rake db:populate
                 bundle exec rake assets:precompile
-                bundle exec rake jobs:work
+                # bundle exec rake jobs:work
 
                 EOF
 
