@@ -15,9 +15,6 @@ Parameters:
   DomainName:
     Type: String
     Default: opendsa.net
-  HostedZoneId:
-    Type: String
-    Default: Z05182552N6AN2Z4OAS8I
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
     Type: 'AWS::EC2::KeyPair::KeyName'
@@ -98,7 +95,6 @@ Parameters:
     Description: Please enter the IP range (CIDR notation) for this VPC
     Type: String
     Default: 10.192.0.0/16
-
 
 Mappings:
   AWSRegionArch2AMI:
@@ -215,7 +211,6 @@ Resources:
           CidrIp: !Ref SSHLocation
 
   WebServer:
-    DependsOn: UpdateHostedZoneCustom
     Type: AWS::EC2::Instance
     Metadata:
       'AWS::CloudFormation::Init':
@@ -822,97 +817,6 @@ Resources:
     CreationPolicy:
       ResourceSignal:
         Timeout: PT2H
-
-  UpdateHostedZoneCustom:
-    Type: "AWS::CloudFormation::CustomResource"
-    Version: '1.0'
-    Properties:
-      ServiceToken: !GetAtt UpdateHostedZone.Arn
-      DomainName: !Ref DomainName
-      PublicIp: !Ref EIP
-      HostedZoneId: !Ref HostedZoneId
-      Capabilities:
-        - CAPABILITY_NAMED_IAM
-
-  UpdateHostedZone:
-    Type: AWS::Lambda::Function
-    Properties:
-      Handler: index.handler
-      Role: !GetAtt UpdateHostedZoneRole.Arn
-      Runtime: "nodejs10.x"
-      Timeout: 10
-      Code:
-        ZipFile: |
-          const AWS = require('aws-sdk')
-          const response = require('cfn-response')
-          const route53 = new AWS.Route53({ apiVersion: '2013-04-01' })
-
-          const changeResourceRecordSets = function (event, context) {
-            var DomainName = event.ResourceProperties.DomainName
-            var HostedZoneId = event.ResourceProperties.HostedZoneId
-            var PublicIp = event.ResourceProperties.PublicIp
-
-            var params = {
-              ChangeBatch: {
-                Changes: [
-                  {
-                    Action: "UPSERT",
-                    ResourceRecordSet: {
-                      Name: DomainName,
-                      ResourceRecords: [
-                        {
-                          Value: PublicIp
-                        }
-                      ],
-                      TTL: 900,
-                      Type: "A"
-                    }
-                  }
-                ],
-                Comment: `Web server for ${DomainName}`
-              },
-              HostedZoneId: HostedZoneId
-            };
-
-            route53.changeResourceRecordSets(params, function (err, data) {
-              console.log(err)
-              if (err) {
-                throw err
-              } else {
-                response.send(event, context, response.SUCCESS, data, DomainName)
-              }
-            })
-          }
-
-          exports.handler = (event, context) => {
-            console.log("Event: " + JSON.stringify(event))
-            try {
-              if (event.RequestType === 'Delete') {
-                response.send(event, context, response.SUCCESS)
-              } else {
-                changeResourceRecordSets(event, context)
-              }
-            }
-            catch (err) {
-              response.send(event, context, response.FAILED, err)
-            }
-          }
-
-  UpdateHostedZoneRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: "Allow"
-            Principal:
-              Service:
-                - "lambda.amazonaws.com"
-            Action:
-              - "sts:AssumeRole"
-      ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/AmazonRoute53FullAccess"
-        - "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 
 Outputs:
   WebsiteURL:
