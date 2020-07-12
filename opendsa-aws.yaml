@@ -734,6 +734,10 @@ Resources:
               cwd: /home/ubuntu/
               ignoreErrors: "true"
             01_generate_certificate:
+              command: sudo chown ubuntu:ubuntu /tmp/01_generate_certificate && sudo chmod 500 /tmp/01_generate_certificate
+              cwd: /tmp
+              ignoreErrors: "true"
+            02_generate_certificate:
               command: /tmp/01_generate_certificate > /var/log/odsa_01_generate_certificate.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
@@ -791,7 +795,7 @@ Resources:
               cwd: /home/ubuntu/
               ignoreErrors: "true"
             02_configure_ssl_certificate:
-              command: sudo service nginx restart
+              command: sudo service nginx restart && sudo reboot
               cwd: /home/ubuntu/
               ignoreErrors: "true"
     Properties:
