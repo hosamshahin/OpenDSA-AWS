@@ -684,13 +684,13 @@ Resources:
               ignoreErrors: "true"
         generate_certificate:
           files:
-            /tmp/01_generate_certificate:
+            /tmp/01_generate_certificate_init:
               content: !Sub |
                 #!/bin/bash
                 su ubuntu << 'EOF'
 
                 source .bash_profile
-                sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt -subj "/C=AU/ST=NSW/L=Sydney/O=MongoDB/OU=root/CN=`hostname -f`/emailAddress=kevinadi@mongodb.com"
+                sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt -subj "/C=US/ST=Virginia/L=Blacksburg/O=VT/OU=CS/CN=DomainName/emailAddress=opendsa@cs.vt.edu"
 
                 EOF
               mode: '000500'
@@ -734,6 +734,10 @@ Resources:
               owner: root
               group: root
           commands:
+            00_generate_certificate:
+              command: sed "s/DomainName/$(curl http://169.254.169.254/latest/meta-data/public-hostname)/" /tmp/01_generate_certificate_init > /tmp/01_generate_certificate
+              cwd: /home/ubuntu/
+              ignoreErrors: "true"
             01_generate_certificate:
               command: /tmp/01_generate_certificate > /var/log/odsa_01_generate_certificate.log
               cwd: /home/ubuntu/
