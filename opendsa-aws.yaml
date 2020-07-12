@@ -506,13 +506,21 @@ Resources:
                 bundle exec rake db:seed
                 bundle exec rake db:populate
                 bundle exec rake assets:precompile
-                # bundle exec rake jobs:work
-
+                /home/ubuntu/OpenDSA-LTI/bin/delayed_job -n 2 start
                 EOF
 
               mode: '000500'
               owner: ubuntu
               group: ubuntu
+            /etc/rc.local:
+              content: !Sub |
+                #!/bin/sh -e
+
+                RAILS_ENV=production
+                su -s /bin/bash - ubuntu -c "cd /home/ubuntu/OpenDSA-LTI; RAILS_ENV=production bundle exec rake jobs:work &"
+              mode: '000700'
+              owner: root
+              group: root
           commands:
             01_opendsa_dependencies:
               command: /tmp/opendsa_dependencies > /var/log/odsa_opendsa_dependencies.log
