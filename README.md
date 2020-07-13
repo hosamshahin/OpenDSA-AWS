@@ -43,6 +43,7 @@ For proper working you must provide the following resources:
 ## Provisinging steps
 
 * Log in to your AWS account.
+
 | AWS Region | Short name | |
 | -- | -- | -- |
 | US East (Ohio) | us-east-2 | [![cloudformation-launch-button](images/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/new?stackName=opendsa&templateURL=https://opendsa.s3.amazonaws.com/opendsa-aws.yaml) |
@@ -60,6 +61,7 @@ For proper working you must provide the following resources:
 | Asia Pacific (Singapore) | ap-southeast-1 | [![cloudformation-launch-button](images/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-1#/stacks/new?stackName=opendsa&templateURL=https://opendsa.s3.amazonaws.com/opendsa-aws.yaml) |
 | Asia Pacific (Mumbai) | ap-south-1 |  [![cloudformation-launch-button](images/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=ap-south-1#/stacks/new?stackName=opendsa&templateURL=https://opendsa.s3.amazonaws.com/opendsa-aws.yaml) |
 | South America (São Paulo) | sa-east-1 |  [![cloudformation-launch-button](images/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=sa-east-1#/stacks/new?stackName=opendsa&templateURL=https://opendsa.s3.amazonaws.com/opendsa-aws.yaml) |
+
 * Fill in the template parameters
     - Email: Provide your institution email address to get important notifications regarding the infrastructure resources staus and certificate expiry date.
     - DomainName: The Domain you registered with AWS Route53 service
