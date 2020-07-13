@@ -15,6 +15,9 @@ Parameters:
   DomainName:
     Type: String
     Default: opendsa.net
+  AdditionalDomainName:
+    Type: String
+    Default: odsa.opendsa.net
   HostedZoneId:
     Type: String
     Default: Z05182552N6AN2Z4OAS8I
@@ -573,7 +576,7 @@ Resources:
 
                 sudo apt-get install -y certbot python3-certbot-nginx
 
-                sudo certbot certonly --nginx -d ${DomainName} --register-unsafely-without-email --agree-tos
+                sudo certbot certonly --nginx -d ${DomainName} -d ${AdditionalDomainName} -m ${Email} --agree-tos
 
                 EOF
               mode: '000500'
@@ -790,6 +793,7 @@ Resources:
     Properties:
       ServiceToken: !GetAtt UpdateHostedZone.Arn
       DomainName: !Ref DomainName
+      AdditionalDomainName: !Ref AdditionalDomainName
       PublicIp: !Ref EIP
       HostedZoneId: !Ref HostedZoneId
       Capabilities:
@@ -810,6 +814,7 @@ Resources:
 
           const changeResourceRecordSets = function (event, context) {
             var DomainName = event.ResourceProperties.DomainName
+            var AdditionalDomainName = event.ResourceProperties.AdditionalDomainName
             var HostedZoneId = event.ResourceProperties.HostedZoneId
             var PublicIp = event.ResourceProperties.PublicIp
 
@@ -820,6 +825,19 @@ Resources:
                     Action: "UPSERT",
                     ResourceRecordSet: {
                       Name: DomainName,
+                      ResourceRecords: [
+                        {
+                          Value: PublicIp
+                        }
+                      ],
+                      TTL: 900,
+                      Type: "A"
+                    }
+                  },
+                  {
+                    Action: "UPSERT",
+                    ResourceRecordSet: {
+                      Name: AdditionalDomainName,
                       ResourceRecords: [
                         {
                           Value: PublicIp
