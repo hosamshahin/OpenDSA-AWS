@@ -760,7 +760,7 @@ Resources:
               cwd: /home/ubuntu/
               ignoreErrors: "true"
             02_configure_ssl_certificate:
-              command: sudo service nginx restart && sudo reboot
+              command: sudo service nginx restart
               cwd: /home/ubuntu/
               ignoreErrors: "true"
     Properties:
