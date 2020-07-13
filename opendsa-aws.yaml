@@ -576,7 +576,7 @@ Resources:
 
                 sudo apt-get install -y certbot python3-certbot-nginx
 
-                sudo certbot certonly --nginx -d ${DomainName} -d ${AdditionalDomainName} -m ${Email} --agree-tos
+                sudo certbot certonly --nginx -d ${DomainName} -d ${AdditionalDomainName} -m ${Email} --agree-tos --non-interactive
 
                 EOF
               mode: '000500'
@@ -728,21 +728,21 @@ Resources:
                       root   html;
                   }
 
-                  listen [::]:443 ssl ipv6only=on; # managed by Certbot
-                  listen 443 ssl; # managed by Certbot
-                    ssl_certificate /etc/letsencrypt/live/${DomainName}/fullchain.pem; # managed by Certbot
-                    ssl_certificate_key /etc/letsencrypt/live/${DomainName}/privkey.pem; # managed by Certbot
-                  include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
-                  ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+                  listen [::]:443 ssl ipv6only=on;
+                  listen 443 ssl;
+                    ssl_certificate /etc/letsencrypt/live/${DomainName}/fullchain.pem;
+                    ssl_certificate_key /etc/letsencrypt/live/${DomainName}/privkey.pem;
+                  include /etc/letsencrypt/options-ssl-nginx.conf;
+                  ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
                 }
                 server {
                     if ($host = ${DomainName}) {
                         return 301 https://$host$request_uri;
-                    } # managed by Certbot
+                    }
                         listen 80;
                         listen [::]:80;
                         server_name ${DomainName};
-                    return 404; # managed by Certbot
+                    return 404;
                 }
               mode: '000644'
               owner: root
