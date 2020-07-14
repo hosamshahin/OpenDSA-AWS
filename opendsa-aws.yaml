@@ -4,20 +4,21 @@ Description: >-
   Rails stack using a single EC2 instance with a local MySQL database for
   storage. This template demonstrates using the AWS CloudFormation bootstrap
   scripts to install the packages and files necessary to deploy a Rails
-  application. This example creates a simple hello world application from the
-  template. **WARNING** This template creates an Amazon EC2 instance. You will
-  be billed for the AWS resources used if you create a stack from this template.
+  application. This template automates OpenDSA infrastructure provisioning and application
+  deployment on AWS.
 Parameters:
   Email:
     Type: String
     Default: example@mail.com
     Description: Email address for important account notifications. Please provide your instiution .edu email address.
-  DomainName:
-    Type: String
-    Default: opendsa.net
+    DomainName:
+      Type: String
+      Default: opendsa.net
+      Description: The DomainName registered to point to the EC2 instance created by this template.
   AdditionalDomainName:
     Type: String
     Default: odsa.opendsa.net
+    Description: Dummy subdomain used in case Let's Encrypt duplicate certificate limit was reached. Please read README.md for more details.
   HostedZoneId:
     Type: String
     Default: Z05182552N6AN2Z4OAS8I
