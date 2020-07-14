@@ -23,7 +23,7 @@ To be able to deploy your instance of OpenDSA system you need to do the followin
 * [Create and Activate a new AWS account](https://aws.amazon.com/premiumsupport/knowledge-center/create-and-activate-aws-account/#:~:text=Open%20the%20Amazon%20Web%20Services,Create%20a%20new%20AWS%20account)
 * [Secure your AWS account root user](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-user.html)
 * [Register a domain using AWS Route53 service](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/domain-register.html)
-* [Create a key pair using EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#having-ec2-create-your-key-pair)
+* [Create a key pair using EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html#having-ec2-create-your-key-pair). **IMPORTANT**, the key pair should be created in the same region you provision the template.
 
 ## Solution Architecture
 
