@@ -817,37 +817,40 @@ Resources:
             var AdditionalDomainName = event.ResourceProperties.AdditionalDomainName
             var HostedZoneId = event.ResourceProperties.HostedZoneId
             var PublicIp = event.ResourceProperties.PublicIp
+            var changes = []
+            changes.push({
+              Action: "UPSERT",
+              ResourceRecordSet: {
+                Name: DomainName,
+                ResourceRecords: [
+                  {
+                    Value: PublicIp
+                  }
+                ],
+                TTL: 900,
+                Type: "A"
+              }
+            })
+
+            if (DomainName != AdditionalDomainName) {
+              changes.push({
+                Action: "UPSERT",
+                ResourceRecordSet: {
+                  Name: AdditionalDomainName,
+                  ResourceRecords: [
+                    {
+                      Value: PublicIp
+                    }
+                  ],
+                  TTL: 900,
+                  Type: "A"
+                }
+              })
+            }
 
             var params = {
               ChangeBatch: {
-                Changes: [
-                  {
-                    Action: "UPSERT",
-                    ResourceRecordSet: {
-                      Name: DomainName,
-                      ResourceRecords: [
-                        {
-                          Value: PublicIp
-                        }
-                      ],
-                      TTL: 900,
-                      Type: "A"
-                    }
-                  },
-                  {
-                    Action: "UPSERT",
-                    ResourceRecordSet: {
-                      Name: AdditionalDomainName,
-                      ResourceRecords: [
-                        {
-                          Value: PublicIp
-                        }
-                      ],
-                      TTL: 900,
-                      Type: "A"
-                    }
-                  }
-                ],
+                Changes: changes,
                 Comment: `Web server for ${DomainName}`
               },
               HostedZoneId: HostedZoneId

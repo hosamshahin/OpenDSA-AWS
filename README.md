@@ -6,6 +6,7 @@
   * [Prerequisites](#prerequisites)
   * [Solution Architecture](#solution-architecture)
   * [Provisinging Steps](#provisinging-steps)
+  * [Debug Provisinging Automation](#debug-provisinging-automation)
   * [Post Provisinging Validation](#post-provisinging-validation)
   * [Stack Deletion](#stack-deletion)
   * [AWS Costs](#aws-costs)
@@ -74,6 +75,10 @@ After OpenDSA-AWS template execution completes it will create the following reso
     - *VpcCIDR*: VPC IP range (you don't need to change this value)
 
 The provisioning process might take about 10 mins. Wait until the cloud formation stack status change to *CREATE_COMLETE*.
+
+## Debug Provisinging Automation
+
+OpenDSA-AWS is using [CloudFormration helper script](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-helper-scripts-reference.html) to run a series of shell scripts against the EC2 instance to deploy OpenDSA application. You can view the scripts' output written to `/var/log/cfn-init-cmd.log` inside the EC2 instance. To connect to the EC2 machine use the terminal with the key pair created earlier. Also, you can connect to The EC2 instance though AWS EC2 console because the machine is loaded with `ec2-instance-connect` package which allows AWS account admin to log into the machine using the console. For the latter method, go to the EC2 service then select the running instance then hit the connect button. The `Connect to your instance` dialog box will appear, choose `EC2 Instance Connect (browser-based SSH connection)` option, and hit connect.
 
 ## Post Provisinging validation
 
