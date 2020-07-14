@@ -11,10 +11,10 @@ Parameters:
     Type: String
     Default: example@mail.com
     Description: Email address for important account notifications. Please provide your instiution .edu email address.
-    DomainName:
-      Type: String
-      Default: opendsa.net
-      Description: The DomainName registered to point to the EC2 instance created by this template.
+  DomainName:
+    Type: String
+    Default: opendsa.net
+    Description: The DomainName registered to point to the EC2 instance created by this template.
   AdditionalDomainName:
     Type: String
     Default: odsa.opendsa.net
