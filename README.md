@@ -40,7 +40,7 @@ After OpenDSA-AWS template execution completes it will create the following reso
 
 ## Provisinging steps
 
-* Log in to your AWS account and `Launch Stack` AWS region close to you.
+* Log in to your AWS account and click `Launch Stack` button below in the AWS region close to you.
 
 | AWS Region | Short name | |
 | -- | -- | -- |
