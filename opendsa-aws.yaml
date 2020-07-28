@@ -227,8 +227,8 @@ Resources:
           full_install:
             - install_and_enable_cfn_hup
             - install_dependencies
-            - install_ruby_2_4_0
-            - install_rails_4
+            - install_ruby_2_7_1
+            - install_rails_6
             - install_mysql_5_7
             - create_opendsa_db
             - clone_install_opendsa
@@ -318,7 +318,7 @@ Resources:
               command: /tmp/install_dependencies > /var/log/odsa_install_dependencies.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
-        install_ruby_2_4_0:
+        install_ruby_2_7_1:
           files:
             /tmp/install_ruby:
               content: !Sub |
@@ -328,8 +328,8 @@ Resources:
                 curl -sSL https://get.rvm.io -o /tmp/rvm.sh
                 cat /tmp/rvm.sh | bash -s stable --rails
                 source /home/ubuntu/.rvm/scripts/rvm
-                rvm install 2.4
-                rvm --default use 2.4
+                rvm install 2.7.1
+                rvm --default use 2.7.1
                 EOF
               mode: '000500'
               owner: ubuntu
@@ -339,7 +339,7 @@ Resources:
               command: /tmp/install_ruby > /var/log/odsa_install_ruby.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
-        install_rails_4:
+        install_rails_6:
           files:
             /tmp/install_rails:
               content: !Sub |
@@ -347,8 +347,8 @@ Resources:
                 su ubuntu << 'EOF'
 
                 source .bash_profile
-                gem install rails -v 4 --no-document
-                gem install bundler:1.17.3 --no-document
+                gem install rails -v 6.0.3.1 --no-document
+                gem install bundler:2.1.4 --no-document
 
                 EOF
               mode: '000500'
@@ -423,7 +423,8 @@ Resources:
                 pip install --upgrade beautifulsoup4
 
                 # clone and install OpenDSA-LTI dependencies
-                git clone --depth=1 https://github.com/hosamshahin/OpenDSA-LTI.git /home/ubuntu/OpenDSA-LTI
+                git clone --depth=1 https://github.com/OpenDSA/OpenDSA-LTI.git /home/ubuntu/OpenDSA-LTI --branch railsv6 --single-branch
+
                 cd /home/ubuntu/OpenDSA-LTI
                 bundle install --deployment --without development test
 
@@ -660,7 +661,7 @@ Resources:
             /tmp/mod-http-passenger.conf:
               content: !Sub |
                 passenger_root /usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini;
-                passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby;
+                passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.7.1/wrappers/ruby;
               mode: '000644'
               owner: root
               group: root
@@ -672,7 +673,7 @@ Resources:
                         server_name ${DomainName};
 
                         passenger_enabled on;
-                        passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby;
+                        passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.7.1/wrappers/ruby;
 
                         rails_env    production;
                         root         /home/ubuntu/OpenDSA-LTI/public;
@@ -718,7 +719,7 @@ Resources:
                   server_name ${DomainName};
 
                   passenger_enabled on;
-                  passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.4.9/wrappers/ruby;
+                  passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.7.1/wrappers/ruby;
 
                   rails_env    production;
                   root         /home/ubuntu/OpenDSA-LTI/public;
