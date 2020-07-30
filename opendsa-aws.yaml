@@ -414,7 +414,7 @@ Resources:
                 su ubuntu << 'EOF'
 
                 source .bash_profile
-                git clone --depth=1 https://github.com/OpenDSA/OpenDSA.git /home/ubuntu/OpenDSA --branch railsv6 --single-branch
+                git clone --depth=1 https://github.com/OpenDSA/OpenDSA.git /home/ubuntu/OpenDSA --branch python2 --single-branch
                 cd /home/ubuntu/OpenDSA
                 make pull
 
