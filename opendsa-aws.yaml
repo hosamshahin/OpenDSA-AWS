@@ -414,7 +414,7 @@ Resources:
                 su ubuntu << 'EOF'
 
                 source .bash_profile
-                git clone --depth=1 https://github.com/OpenDSA/OpenDSA.git /home/ubuntu/OpenDSA
+                git clone --depth=1 https://github.com/OpenDSA/OpenDSA.git /home/ubuntu/OpenDSA --branch railsv6 --single-branch
                 cd /home/ubuntu/OpenDSA
                 make pull
 
@@ -519,8 +519,8 @@ Resources:
               group: ubuntu
             /etc/rc.local:
               content: !Sub |
-                #!/bin/sh -e
 
+                #!/bin/sh -e
                 RAILS_ENV=production
                 su -s /bin/bash - ubuntu -c "cd /home/ubuntu/OpenDSA-LTI; RAILS_ENV=production bundle exec rake jobs:work &"
               mode: '000700'
