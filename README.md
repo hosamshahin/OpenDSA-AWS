@@ -120,6 +120,7 @@ You can get a list of certificates issued for your registered domain by searchin
 - [ ] Implement a high available solution by deploying multiple EC2 instances behind a load balancer and move the database out of the instance to the RDS service.
 - [ ] Push clickstreams to a centralized store like S3 and feed the data to [Caliper analytics](https://www.imsglobal.org/activity/caliper).
 - [ ] Enhance system notifications and alarms in some cases like unusual resources high usage.
+- [ ] Change folder .config owner to ubuntu `$ sudo chown -R $(whoami) .config`
 
 ## Contribution
 If you find a bug in the template or you want to contribute to the project, please fork the repo, create a new branch, fix the bug or implement the improvement and submit a pull request.

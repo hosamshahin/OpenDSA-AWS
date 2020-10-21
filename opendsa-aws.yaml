@@ -24,48 +24,48 @@ Parameters:
     Default: Z05182552N6AN2Z4OAS8I
   KeyName:
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
-    Type: 'AWS::EC2::KeyPair::KeyName'
+    Type: "AWS::EC2::KeyPair::KeyName"
     ConstraintDescription: must be the name of an existing EC2 KeyPair.
-    Default: opendsa2
+    Default: opendsa
   DBName:
     Description: MySQL database name
     Type: String
-    MinLength: '1'
-    MaxLength: '64'
-    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    MinLength: "1"
+    MaxLength: "64"
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
     ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
     Default: opendsa
   DBUser:
-    NoEcho: 'true'
+    NoEcho: "true"
     Description: Username for MySQL database access
     Type: String
-    MinLength: '1'
-    MaxLength: '16'
-    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    MinLength: "1"
+    MaxLength: "16"
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
     ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
     Default: opendsa
   DBPassword:
-    NoEcho: 'true'
+    NoEcho: "true"
     Description: Password MySQL database access
     Type: String
-    MinLength: '1'
-    MaxLength: '41'
-    AllowedPattern: '[a-zA-Z0-9]*'
+    MinLength: "1"
+    MaxLength: "41"
+    AllowedPattern: "[a-zA-Z0-9]*"
     ConstraintDescription: must contain only alphanumeric characters.
     Default: opendsa
   DBRootPassword:
-    NoEcho: 'true'
+    NoEcho: "true"
     Description: Root password for MySQL
     Type: String
-    MinLength: '1'
-    MaxLength: '41'
-    AllowedPattern: '[a-zA-Z0-9]*'
+    MinLength: "1"
+    MaxLength: "41"
+    AllowedPattern: "[a-zA-Z0-9]*"
     ConstraintDescription: must contain only alphanumeric characters.
     Default: root
   InstanceType:
     Description: WebServer EC2 instance type
     Type: String
-    Default: t2.small
+    Default: t2.medium
     AllowedValues:
       - t1.micro
       - t2.nano
@@ -93,8 +93,8 @@ Parameters:
   SSHLocation:
     Description: The IP address range that can be used to SSH to the EC2 instances
     Type: String
-    MinLength: '9'
-    MaxLength: '18'
+    MinLength: "9"
+    MaxLength: "18"
     Default: 0.0.0.0/0
     AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
@@ -102,7 +102,6 @@ Parameters:
     Description: Please enter the IP range (CIDR notation) for this VPC
     Type: String
     Default: 10.192.0.0/16
-
 
 Mappings:
   AWSRegionArch2AMI:
@@ -152,7 +151,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      AvailabilityZone: !Select [0, !GetAZs ""]
       CidrBlock: !Ref VpcCIDR
       MapPublicIpOnLaunch: true
 
@@ -168,11 +167,11 @@ Resources:
       SubnetId: !Ref PublicSubnet
       Description: Interface for controlling traffic such as SSH
       GroupSet:
-      - !Ref WebServerSecurityGroup
+        - !Ref WebServerSecurityGroup
       SourceDestCheck: true
       Tags:
-      - Key: Network
-        Value: Control
+        - Key: Network
+          Value: Control
 
   AssociateControlPort:
     Type: AWS::EC2::EIPAssociation
@@ -206,23 +205,23 @@ Resources:
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: '443'
-          ToPort: '443'
+          FromPort: "443"
+          ToPort: "443"
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: '80'
-          ToPort: '80'
+          FromPort: "80"
+          ToPort: "80"
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: '22'
-          ToPort: '22'
+          FromPort: "22"
+          ToPort: "22"
           CidrIp: !Ref SSHLocation
 
   WebServer:
     DependsOn: UpdateHostedZoneCustom
     Type: AWS::EC2::Instance
     Metadata:
-      'AWS::CloudFormation::Init':
+      "AWS::CloudFormation::Init":
         configSets:
           full_install:
             - install_and_enable_cfn_hup
@@ -245,7 +244,7 @@ Resources:
                 stack=${AWS::StackId}
                 region=${AWS::Region}
                 interval=1
-              mode: '000400'
+              mode: "000400"
               owner: root
               group: root
             /etc/cfn/hooks.d/cfn-auto-reloader.conf:
@@ -309,8 +308,16 @@ Resources:
                 sudo apt-get install -y libxslt1-dev
                 sudo apt-get install -y libcurl4-openssl-dev
                 sudo apt-get install -y dirmngr
+                sudo apt-get install -y apt-utils
+                sudo apt-get install -y vim
+                sudo apt-get install -y cron
+                sudo apt-get install -y python3-pip
+                sudo apt-get install -y git-core
+                sudo apt-get install -y python3-venv
+                sudo apt-get upgrade -y
+                sudo pip3 install --upgrade pip
                 EOF
-              mode: '000500'
+              mode: "000500"
               owner: ubuntu
               group: ubuntu
           commands:
@@ -331,7 +338,7 @@ Resources:
                 rvm install 2.7.1
                 rvm --default use 2.7.1
                 EOF
-              mode: '000500'
+              mode: "000500"
               owner: ubuntu
               group: ubuntu
           commands:
@@ -351,7 +358,7 @@ Resources:
                 gem install bundler:2.1.4 --no-document
 
                 EOF
-              mode: '000500'
+              mode: "000500"
               owner: ubuntu
               group: ubuntu
           commands:
@@ -375,7 +382,7 @@ Resources:
                 SQL
 
                 EOF
-              mode: '000500'
+              mode: "000500"
               owner: ubuntu
               group: ubuntu
           commands:
@@ -398,7 +405,7 @@ Resources:
                 SQL
 
                 EOF
-              mode: '000500'
+              mode: "000500"
               owner: ubuntu
               group: ubuntu
           commands:
@@ -414,7 +421,7 @@ Resources:
                 su ubuntu << 'EOF'
 
                 source .bash_profile
-                git clone --depth=1 https://github.com/OpenDSA/OpenDSA.git /home/ubuntu/OpenDSA --branch python2 --single-branch
+                git clone https://github.com/OpenDSA/OpenDSA.git /home/ubuntu/OpenDSA
                 cd /home/ubuntu/OpenDSA
                 make pull
 
@@ -423,7 +430,7 @@ Resources:
                 pip install --upgrade beautifulsoup4
 
                 # clone and install OpenDSA-LTI dependencies
-                git clone --depth=1 https://github.com/OpenDSA/OpenDSA-LTI.git /home/ubuntu/OpenDSA-LTI --branch railsv6 --single-branch
+                git clone https://github.com/OpenDSA/OpenDSA-LTI.git /home/ubuntu/OpenDSA-LTI
 
                 cd /home/ubuntu/OpenDSA-LTI
                 bundle install --deployment --without development test
@@ -447,7 +454,7 @@ Resources:
                 sudo npm install -g uglify-js
 
                 EOF
-              mode: '000500'
+              mode: "000500"
               owner: ubuntu
               group: ubuntu
           commands:
@@ -475,7 +482,7 @@ Resources:
                   host: localhost
                   strict: false
 
-              mode: '000500'
+              mode: "000500"
               owner: ubuntu
               group: ubuntu
             /tmp/secrets_init.yml:
@@ -484,7 +491,7 @@ Resources:
                   secret_key_base: prod_secret_string
                 development:
                   secret_key_base: dev_secret_string
-              mode: '000700'
+              mode: "000700"
               owner: ubuntu
               group: ubuntu
             /tmp/opendsa_dependencies:
@@ -514,7 +521,7 @@ Resources:
 
                 EOF
 
-              mode: '000500'
+              mode: "000500"
               owner: ubuntu
               group: ubuntu
             /etc/rc.local:
@@ -523,7 +530,7 @@ Resources:
                 #!/bin/sh -e
                 RAILS_ENV=production
                 su -s /bin/bash - ubuntu -c "cd /home/ubuntu/OpenDSA-LTI; RAILS_ENV=production bundle exec rake jobs:work &"
-              mode: '000700'
+              mode: "000700"
               owner: root
               group: root
           commands:
@@ -557,7 +564,7 @@ Resources:
                 sudo service nginx restart
 
                 EOF
-              mode: '000500'
+              mode: "000500"
               owner: ubuntu
               group: ubuntu
           commands:
@@ -581,7 +588,7 @@ Resources:
                 sudo certbot certonly --nginx -d ${DomainName} -d ${AdditionalDomainName} -m ${Email} --agree-tos --non-interactive
 
                 EOF
-              mode: '000500'
+              mode: "000500"
               owner: ubuntu
               group: ubuntu
           commands:
@@ -655,14 +662,14 @@ Resources:
                         include /etc/nginx/conf.d/*.conf;
                         include /etc/nginx/sites-enabled/*;
                 }
-              mode: '000644'
+              mode: "000644"
               owner: root
               group: root
             /tmp/mod-http-passenger.conf:
               content: !Sub |
                 passenger_root /usr/lib/ruby/vendor_ruby/phusion_passenger/locations.ini;
                 passenger_ruby /home/ubuntu/.rvm/gems/ruby-2.7.1/wrappers/ruby;
-              mode: '000644'
+              mode: "000644"
               owner: root
               group: root
             /tmp/default:
@@ -684,14 +691,14 @@ Resources:
                             root   html;
                         }
                 }
-              mode: '000644'
+              mode: "000644"
               owner: root
               group: root
             /tmp/configure_nginx_passenger:
               content: !Sub |
                 #!/bin/bash
                 mv -f /tmp/default /etc/nginx/sites-available/
-              mode: '000500'
+              mode: "000500"
               owner: ubuntu
               group: ubuntu
           commands:
@@ -746,14 +753,14 @@ Resources:
                         server_name ${DomainName};
                     return 404;
                 }
-              mode: '000644'
+              mode: "000644"
               owner: root
               group: root
             /tmp/configure_ssl_certificate:
               content: !Sub |
                 #!/bin/bash
                 mv -f /tmp/default /etc/nginx/sites-available/
-              mode: '000500'
+              mode: "000500"
               owner: ubuntu
               group: ubuntu
           commands:
@@ -768,7 +775,7 @@ Resources:
     Properties:
       ImageId: !FindInMap
         - AWSRegionArch2AMI
-        - !Ref 'AWS::Region'
+        - !Ref "AWS::Region"
         - HVM64
       InstanceType: !Ref InstanceType
       KeyName: !Ref KeyName
@@ -791,7 +798,7 @@ Resources:
 
   UpdateHostedZoneCustom:
     Type: "AWS::CloudFormation::CustomResource"
-    Version: '1.0'
+    Version: "1.0"
     Properties:
       ServiceToken: !GetAtt UpdateHostedZone.Arn
       DomainName: !Ref DomainName
