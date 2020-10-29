@@ -70,6 +70,8 @@ After OpenDSA-AWS template execution completes it will create the following reso
     - *DBUser*: OpenDSA database user (default opendsa)
     - *DBPassword*: OpenDSA database password (default opendsa. Change to a strong password)
     - *DBRootPassword*: MySQL root password (default root. Change to even stronger password)
+    - *PasswordRestEmailUsername*: Email address used by OpenDSA to sent password reset notifications to users.
+    - *PasswordRestEmailUserPassword*: The password for previous `PasswordRestEmailUsername` email .
     - *InstanceType*: The EC2 instance type (default t2.small)
     - *SSHLocation*: The IP address range that can be used to SSH to the EC2 instances, we recommend to narrow that range to include only your computer public IP address.
     - *VpcCIDR*: VPC IP range (you don't need to change this value)

@@ -62,15 +62,15 @@ Parameters:
     AllowedPattern: "[a-zA-Z0-9]*"
     ConstraintDescription: must contain only alphanumeric characters.
     Default: root
-  EmailUserName:
+  PasswordRestEmailUsername:
     Type: String
     Default: email_user_name@mail.com
-    Description: Email address used by the OpenDSA to sent password reset notifications to users.
-  EmailUserPassword:
+    Description: Email address used by OpenDSA to sent password reset notifications to users.
+  PasswordResetEmailUserPassword:
     NoEcho: "true"
     Type: String
     Default: email_user_password
-    Description: Email address used by the OpenDSA to sent password reset notifications to users.
+    Description: The password for PasswordRestEmailUsername.
   InstanceType:
     Description: WebServer EC2 instance type
     Type: String
@@ -348,6 +348,8 @@ Resources:
                 source /home/ubuntu/.rvm/scripts/rvm
                 rvm install 2.7.1
                 rvm --default use 2.7.1
+                echo "source /home/ubuntu/.rvm/scripts/rvm" >> /home/ubuntu/.bashrc
+                echo "rvm --default use 2.7.1" >> /home/ubuntu/.bashrc
                 EOF
               mode: "000500"
               owner: ubuntu
@@ -434,6 +436,7 @@ Resources:
                 source .bash_profile
                 git clone https://github.com/OpenDSA/OpenDSA.git /home/ubuntu/OpenDSA
                 cd /home/ubuntu/OpenDSA
+                git checkout TimeMe
                 make pull
 
                 # create venv
@@ -450,6 +453,7 @@ Resources:
                 git clone https://github.com/OpenDSA/OpenDSA-LTI.git /home/ubuntu/OpenDSA-LTI
 
                 cd /home/ubuntu/OpenDSA-LTI
+                git checkout TimeMe
                 bundle install --deployment --without development test
 
                 # make a link from OpenDSA into OpenDSA-LTI
@@ -517,16 +521,16 @@ Resources:
                   email_address: "smtp.gmail.com"
                   email_port: 587
                   email_domain: "gmail.com"
-                  email_user_name: ${EmailUserName}
-                  email_password: ${EmailUserPassword}
+                  email_user_name: ${PasswordRestEmailUsername}
+                  email_password: ${PasswordResetEmailUserPassword}
                   host_url: "https://${DomainName}"
                   python_venv_path: "/home/ubuntu/OpenDSA/.pyVenv/bin/activate"
                 development:
                   email_address: "smtp.gmail.com"
                   email_port: 587
                   email_domain: "gmail.com"
-                  email_user_name: ${EmailUserName}
-                  email_password: ${EmailUserPassword}
+                  email_user_name: ${PasswordRestEmailUsername}
+                  email_password: ${PasswordResetEmailUserPassword}
                   host_url: "https://${DomainName}"
                   python_venv_path: "/home/ubuntu/OpenDSA/.pyVenv/bin/activate"
 
