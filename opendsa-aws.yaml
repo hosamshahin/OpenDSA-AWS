@@ -62,6 +62,15 @@ Parameters:
     AllowedPattern: "[a-zA-Z0-9]*"
     ConstraintDescription: must contain only alphanumeric characters.
     Default: root
+  EmailUserName:
+    Type: String
+    Default: email_user_name@mail.com
+    Description: Email address used by the OpenDSA to sent password reset notifications to users.
+  EmailUserPassword:
+    NoEcho: "true"
+    Type: String
+    Default: email_user_password
+    Description: Email address used by the OpenDSA to sent password reset notifications to users.
   InstanceType:
     Description: WebServer EC2 instance type
     Type: String
@@ -231,7 +240,7 @@ Resources:
             - install_mysql_5_7
             - create_opendsa_db
             - clone_install_opendsa
-            - opendsa_database_connection
+            - opendsa_database_and_app_config
             - install_nginx_passenger
             - configure_nginx_passenger
             - generate_certificate
@@ -311,9 +320,11 @@ Resources:
                 sudo apt-get install -y apt-utils
                 sudo apt-get install -y vim
                 sudo apt-get install -y cron
-                sudo apt-get install -y python3-pip
                 sudo apt-get install -y git-core
-                sudo apt-get install -y python3-venv
+                sudo apt-get install -y python3.8
+                sudo apt-get install -y python3.8-dev
+                sudo apt-get install -y python3.8-distutils
+                sudo apt-get install -y python3.8-venv
                 sudo apt-get upgrade -y
                 sudo pip3 install --upgrade pip
                 EOF
@@ -425,6 +436,12 @@ Resources:
                 cd /home/ubuntu/OpenDSA
                 make pull
 
+                # create venv
+                make venv PYTHON="python3.8"
+                source .pyVenv/bin/activate
+                echo "cd /home/ubuntu/OpenDSA" >> /home/ubuntu/.bashrc
+                echo "source .pyVenv/bin/activate" >> /home/ubuntu/.bashrc
+
                 # install OpenDSA dependencies
                 pip install -r /home/ubuntu/OpenDSA/requirements.txt --upgrade
                 pip install --upgrade beautifulsoup4
@@ -462,7 +479,7 @@ Resources:
               command: /tmp/clone_install_opendsa > /var/log/odsa_clone_install_opendsa.log
               cwd: /home/ubuntu/
               ignoreErrors: "true"
-        opendsa_database_connection:
+        opendsa_database_and_app_config:
           files:
             /tmp/database.yml:
               content: !Sub |
@@ -494,6 +511,28 @@ Resources:
               mode: "000700"
               owner: ubuntu
               group: ubuntu
+            /tmp/application.yml:
+              content: !Sub |
+                production:
+                  email_address: "smtp.gmail.com"
+                  email_port: 587
+                  email_domain: "gmail.com"
+                  email_user_name: ${EmailUserName}
+                  email_password: ${EmailUserPassword}
+                  host_url: "https://${DomainName}"
+                  python_venv_path: "/home/ubuntu/OpenDSA/.pyVenv/bin/activate"
+                development:
+                  email_address: "smtp.gmail.com"
+                  email_port: 587
+                  email_domain: "gmail.com"
+                  email_user_name: ${EmailUserName}
+                  email_password: ${EmailUserPassword}
+                  host_url: "https://${DomainName}"
+                  python_venv_path: "/home/ubuntu/OpenDSA/.pyVenv/bin/activate"
+
+              mode: "000700"
+              owner: ubuntu
+              group: ubuntu
             /tmp/opendsa_dependencies:
               content: !Sub |
                 #!/bin/bash
@@ -506,6 +545,7 @@ Resources:
                 sed "s/prod_secret_string/$(bundle exec rake secret)/" /tmp/secrets_init.yml > /tmp/secrets_prod.yml
                 sed "s/dev_secret_string/$(bundle exec rake secret)/" /tmp/secrets_prod.yml > /tmp/secrets.yml
                 mv -f /tmp/secrets.yml /home/ubuntu/OpenDSA-LTI/config/
+                mv -f /tmp/application.yml /home/ubuntu/OpenDSA-LTI/config/
 
                 chmod 700 /home/ubuntu/OpenDSA-LTI/config /home/ubuntu/OpenDSA-LTI/db
                 chmod 600 /home/ubuntu/OpenDSA-LTI/config/database.yml /home/ubuntu/OpenDSA-LTI/config/secrets.yml
